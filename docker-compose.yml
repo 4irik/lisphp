@@ -1,0 +1,21 @@
+version: "3.9"
+
+volumes:
+  tmp-data: {}
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: "${APP_UID:-10001}:${APP_GID:-10001}"
+    environment:
+      HOME: /tmp
+    volumes:
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+      - tmp-data:/tmp:rw
+      - .:/app:rw
+    ports:
+      - 8888:8080/tcp
+

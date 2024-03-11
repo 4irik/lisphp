@@ -1,0 +1,27 @@
+{
+    "name": "4irik/simple-lisp",
+    "autoload": {
+        "psr-4": {
+            "Che\\SimpleLisp\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Test\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "@php vendor/bin/phpunit --testdox tests",
+        "test-without-todo": "@php vendor/bin/phpunit --exclude-group todo --testdox tests",
+        "type-check": "@php vendor/bin/phpstan analyse -c phpstan.neon",
+        "style-fix": "@php vendor/bin/php-cs-fixer fix"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^1.10",
+        "phpunit/phpunit": "^11",
+        "friendsofphp/php-cs-fixer": "^3.5"
+    },
+    "require": {
+        "php": "^8.3"
+    }
+}
