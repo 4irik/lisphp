@@ -3,7 +3,12 @@
     "autoload": {
         "psr-4": {
             "Che\\SimpleLisp\\": "src/"
-        }
+        },
+        "files": [
+            "src/parser.php",
+            "src/eval.php",
+            "src/env.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
@@ -12,7 +17,6 @@
     },
     "scripts": {
         "test": "@php vendor/bin/phpunit --testdox tests",
-        "test-without-todo": "@php vendor/bin/phpunit --exclude-group todo --testdox tests",
         "type-check": "@php vendor/bin/phpstan analyse -c phpstan.neon",
         "style-fix": "@php vendor/bin/php-cs-fixer fix"
     },
