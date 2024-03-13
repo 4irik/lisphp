@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 error_reporting(E_ALL);
 
+use Che\SimpleLisp\HashMapInterface;
+
 use function Che\SimpleLisp\Env\_defaultEnv;
 use function Che\SimpleLisp\Eval\_eval;
 use function Che\SimpleLisp\Parse\parseTokens;
@@ -39,17 +41,21 @@ while (true) {
     try {
         if($command[0] === ':') {
             switch (true) {
+                // выход
                 case $command === ':quit':
                 case $command === ':q':
                     break 2;
+                    // переменные окружения
                 case $command === ':env':
                 case $command === ':e':
                     writeMessage(hmToString($env), MessageType::INFO);
                     continue 2;
+                    // очистка истории
                 case $command === ':ch':
                     readline_clear_history();
                     @unlink(HISTORY_FILE_PATH);
                     continue 2;
+                    // загрузка файла
                 case str_starts_with($command, ':load'):
                 case str_starts_with($command, ':l'):
                     $fileName = str_replace([':load ', ':l '], '', $command);
@@ -57,24 +63,25 @@ while (true) {
                         throw new Exception(sprintf('File Not Found: "%s"', $fileName));
                     }
                     $command = file_get_contents($fileName);
-                    writeMessage(toString(tokenize($command)));
+                    writeMessage("OK");
                     break;
+                    // показать токены команды
                 case str_starts_with($command, ':t'):
                     $command = trim(substr($command, 2));
                     writeMessage(toString(tokenize($command)), MessageType::INFO);
                     continue 2;
+                    // показать "скомпилированную" команду
                 case str_starts_with($command, ':pt'):
                     $command = trim(substr($command, 3));
                     writeMessage(toString(parseTokens(tokenize($command))), MessageType::INFO);
                     continue 2;
-                    // todo: очистка истории команд
                 default:
                     writeMessage(sprintf("Unknown command '%s'\n", $command), MessageType::WARNING);
                     continue 2;
             }
         }
 
-        $result = _eval(parseTokens(tokenize($command)), $env);
+        $result = __eval($command, $env);
         $messageType = $result === null ? MessageType::INFO : MessageType::REGULAR;
         $result = $result ?? 'OK';
     } catch (\Throwable $e) {
@@ -141,4 +148,19 @@ function hmToString(\Traversable $map): string
     }
 
     return sprintf("=== Global env ===\n%s", implode("\n", $acc));
+}
+
+function __eval(string $command, HashMapInterface $env): mixed
+{
+    $tokens = new \SplDoublyLinkedList();
+    foreach (tokenize($command) as $tokenItem) {
+        $tokens->push($tokenItem);
+    }
+
+    $result = null;
+    while (!$tokens->isEmpty()) {
+        $result = _eval(parseTokens($tokens), $env);
+    }
+
+    return $result;
 }
