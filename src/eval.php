@@ -61,7 +61,7 @@ function _eval(mixed $x, HashMapInterface $env): mixed
 
         return match ((string) $x[0]) {
             'cond' => _handleIf($x, $env),
-            'def' => _handleDefine($x, $env),
+            'def', 'set!' => _handleDefine($x, $env),
             'do' => _handleDo($x, $env),
             'quote' => $x[1],
             //            'lambda' => _handleLambda($x, $env),
