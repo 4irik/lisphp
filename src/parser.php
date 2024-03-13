@@ -7,6 +7,11 @@ namespace Che\SimpleLisp\Parse;
 use Che\SimpleLisp\Symbol;
 
 /**
+ * @phpstan-type Atom scalar|bool|Symbol
+ * @phpstan-type Command Atom|iterable
+ */
+
+/**
  * @param string $program
  * @return iterable<string>
  */
@@ -27,6 +32,9 @@ function tokenize(string $program): iterable
     );
 }
 
+/**
+ * @return Atom
+ */
 function _atom(string $token): int|float|bool|string|Symbol
 {
     if(is_numeric($token)) {
@@ -47,9 +55,14 @@ function _atom(string $token): int|float|bool|string|Symbol
     return new Symbol($token === '\'' ? 'quote' : $token);
 }
 
-function parseTokens(\SplDoublyLinkedList|array  $tokens): int|float|bool|string|Symbol|iterable
+/**
+ * @param iterable<Atom> $tokens
+ * @return Command
+ * @throws \Exception
+ */
+function parseTokens(iterable $tokens): int|float|bool|string|Symbol|iterable
 {
-    if(is_array($tokens)) {
+    if(!$tokens instanceof \SplDoublyLinkedList) {
         $buf = new \SplDoublyLinkedList();
         foreach ($tokens as $t) {
             $buf->push($t);
@@ -57,6 +70,16 @@ function parseTokens(\SplDoublyLinkedList|array  $tokens): int|float|bool|string
         $tokens = $buf;
     }
 
+    return _parseTokens($tokens);
+}
+
+/**
+ * @param \SplDoublyLinkedList<Atom> $tokens
+ * @return Command
+ * @throws \Exception
+ */
+function _parseTokens(\SplDoublyLinkedList $tokens): int|float|bool|string|Symbol|iterable
+{
     if($tokens->isEmpty()) {
         throw new \Exception('Unexpected EOF');
     }
@@ -67,7 +90,7 @@ function parseTokens(\SplDoublyLinkedList|array  $tokens): int|float|bool|string
     if($token === '(') {
         $elements = [];
         while ($tokens[0] !== ')') {
-            $elements[] = parseTokens($tokens);
+            $elements[] = _parseTokens($tokens);
             if($tokens->isEmpty()) {
                 throw new \Exception('Unexpected EOF');
             }

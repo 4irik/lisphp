@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase;
 
 use function Che\SimpleLisp\Parse\_atom;
 use function Che\SimpleLisp\Parse\parseTokens;
+use function Che\SimpleLisp\Parse\_parseTokens;
 use function Che\SimpleLisp\Parse\tokenize;
 use function PHPUnit\Framework\assertEquals;
 
@@ -38,7 +39,7 @@ class ParseTest extends TestCase
     {
         self::expectExceptionObject(new \Exception('Unexpected EOF'));
 
-        parseTokens([]);
+        _parseTokens(new \SplDoublyLinkedList());
     }
 
     public function testParseTokenSyntaxErr(): void
