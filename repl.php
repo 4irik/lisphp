@@ -33,6 +33,10 @@ while (true) {
             case ':quit':
             case ':q':
                 break 2;
+            case ':env':
+                writeMessage(hmToString($env), MessageType::INFO);
+                continue 2;
+                // todo: загрузка и интерпритация файлов
             default:
                 writeMessage(sprintf("Unknown command '%s'\n", $command), MessageType::WARNING);
                 continue 2;
@@ -41,7 +45,8 @@ while (true) {
 
     try {
         $result = _eval(parseTokens(tokenize($command)), $env);
-        $messageType = MessageType::REGULAR;
+        $messageType = $result === null ? MessageType::INFO : MessageType::REGULAR;
+        $result = $result ?? 'OK';
     } catch (\Throwable $e) {
         $result = sprintf('%s', $e->getMessage());
         $messageType = MessageType::ERROR;
@@ -54,7 +59,7 @@ exit(0);
 
 function toString(mixed $value): string
 {
-    if(is_array($value)) {
+    if(is_iterable($value)) {
         $acc = '';
         foreach ($value as $item) {
             $acc .= ' ';
@@ -87,4 +92,18 @@ function decorateMessage(string $message, MessageType $type = MessageType::REGUL
 function writeMessage(string $message, MessageType $type): void
 {
     echo decorateMessage($message, $type). "\n";
+}
+
+function hmToString(\Traversable $map): string
+{
+    $acc = [];
+    foreach ($map as $key => $value) {
+        if(is_callable($value)) {
+            continue;
+        }
+
+        $acc[] = sprintf('key: %s | value: %s', $key, toString($value));
+    }
+
+    return sprintf("=== Global env ===\n%s", implode("\n", $acc));
 }

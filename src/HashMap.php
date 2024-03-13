@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Che\SimpleLisp;
 
-class HashMap implements HashMapInterface
+class HashMap implements HashMapInterface, \IteratorAggregate
 {
     private array $_map;
 
@@ -26,5 +26,10 @@ class HashMap implements HashMapInterface
     public function del(Symbol $symbol): void
     {
         unset($this->_map[$symbol->name]);
+    }
+
+    #[\Override] public function getIterator(): \Traversable
+    {
+        return new \ArrayIterator($this->_map);
     }
 }
