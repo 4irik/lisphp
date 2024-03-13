@@ -55,6 +55,10 @@ function _eval(mixed $x, HashMapInterface $env): mixed
     }
 
     if(is_array($x)) {
+        if(!$x) {
+            return $x;
+        }
+
         return match ((string) $x[0]) {
             'cond' => _handleIf($x, $env),
             'def' => _handleDefine($x, $env),
