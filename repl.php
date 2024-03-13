@@ -15,6 +15,30 @@ require_once './vendor/autoload.php';
 
 const HISTORY_FILE_PATH = '.repl_history';
 
+enum OutputMode: string
+{
+    case ESCAPE = '?> ';
+    case UNESCAPE = 'unescape?> ';
+}
+
+class ReplMode
+{
+    protected static ?self $instance = null;
+    public OutputMode $mode;
+
+    public static function instance(): self
+    {
+        if(self::$instance === null) {
+            self::$instance = new self();
+        }
+
+        return self::$instance;
+    }
+}
+
+$outputMode = ReplMode::instance();
+$outputMode->mode = OutputMode::ESCAPE;
+
 enum MessageType: string
 {
     case REGULAR = '';
@@ -30,7 +54,7 @@ if(file_exists(HISTORY_FILE_PATH)) {
 }
 
 while (true) {
-    $command = readline('?> ');
+    $command = readline(ReplMode::instance()->mode->value);
 
     if(empty(str_replace(' ', '', $command))) {
         continue;
@@ -41,7 +65,15 @@ while (true) {
     try {
         if($command[0] === ':') {
             switch (true) {
-                // выход
+                // режим экранированного вывода
+                case $command === ':escape':
+                    ReplMode::instance()->mode = OutputMode::ESCAPE;
+                    continue 2;
+                    // режим экранированного вывода
+                case $command === ':unescape':
+                    ReplMode::instance()->mode = OutputMode::UNESCAPE;
+                    continue 2;
+                    // выход
                 case $command === ':quit':
                 case $command === ':q':
                     break 2;
@@ -107,10 +139,13 @@ function toString(mixed $value): string
         return sprintf('(%s)', substr($acc, 1));
     }
 
+    if(ReplMode::instance()->mode === OutputMode::UNESCAPE) {
+        return (string)$value;
+    }
+
     if(is_string($value)) {
         $value = sprintf('"%s"', $value);
     }
-
     return str_replace(["\r", "\n", "\t"], ['\r', '\n', '\t'], (string)$value);
 }
 
