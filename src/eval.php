@@ -62,6 +62,7 @@ function _eval(mixed $x, HashMapInterface $env): mixed
             'quote' => $x[1],
             //            'lambda' => _handleLambda($x, $env),
             //            'map' => _handleMap($x, $env),
+            'eval' => _eval(_eval($x[1], $env), $env),
             default => _handleProcedure($x, $env),
         };
     }

@@ -88,6 +88,20 @@ class EvalTest extends TestCase
         assertEquals($expect = [new Symbol('cond'), true, 1, 2], _eval([new Symbol('quote'), $expect], new HashMap()));
     }
 
+    public function testEval(): void
+    {
+        assertEquals(1, _eval([new Symbol('eval'), 1], new HashMap()));
+        assertEquals(1, _eval([
+            new Symbol('eval'),
+            [
+                new Symbol('quote'),
+                [
+                    new Symbol('cond'), true, 1, 2
+                ]
+            ],
+        ], new HashMap()));
+    }
+
     public function testProcedureEmbedded(): void
     {
         $env = new HashMap();
