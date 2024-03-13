@@ -17,7 +17,8 @@ function tokenize(string $program): iterable
             explode(
                 ' ',
                 str_replace(['(', ')', '\''], [' ( ', ' ) ', ' \' '], $program)
-            )
+            ),
+            fn ($val) => '0' === $val ? true : !empty($val)
         )
     );
 }

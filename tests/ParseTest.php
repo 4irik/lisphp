@@ -22,6 +22,11 @@ class ParseTest extends TestCase
         self::assertEquals(['\'', 'abc'], tokenize('\'abc'));
     }
 
+    public function testTokenizeZero(): void
+    {
+        self::assertEquals(['(', '+', '1', '0', ')'], tokenize('(+ 1 0)'));
+    }
+
     #[DataProvider('atomDP')]
     public function testAtom(string $token, mixed $expected): void
     {
