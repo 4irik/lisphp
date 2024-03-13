@@ -21,25 +21,102 @@ class EnvTest extends TestCase
 
     public static function envDP(): iterable
     {
-        yield '=' => [
+        yield '= true' => [
             '=',
             true,
             10,
             10
         ];
 
-        yield '>=' => [
+        yield '= false' => [
+            '=',
+            false,
+            10,
+            11
+        ];
+
+        yield '> true' => [
+            '>',
+            true,
+            10,
+            9
+        ];
+
+        yield '> false eq' => [
+            '>',
+            false,
+            10,
+            10
+        ];
+
+        yield '> false lt' => [
+            '>',
+            false,
+            10,
+            11
+        ];
+
+        yield '< true' => [
+            '<',
+            true,
+            10,
+            11
+        ];
+
+        yield '< false eq' => [
+            '<',
+            false,
+            10,
+            10
+        ];
+
+        yield '< false gt' => [
+            '<',
+            false,
+            10,
+            9
+        ];
+
+        yield '>= false' => [
             '>=',
             false,
             10,
             15
         ];
 
-        yield '<=' => [
+        yield '>= true eq' => [
+            '>=',
+            true,
+            10,
+            10
+        ];
+
+        yield '>= true gt' => [
+            '>=',
+            true,
+            10,
+            9
+        ];
+
+        yield '<= true lt' => [
             '<=',
             true,
             10,
             15
+        ];
+
+        yield '<= true eq' => [
+            '<=',
+            true,
+            10,
+            10
+        ];
+
+        yield '<= false' => [
+            '<=',
+            false,
+            15,
+            10
         ];
 
         yield 'not' => [
