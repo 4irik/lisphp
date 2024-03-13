@@ -12,6 +12,7 @@ use function Che\SimpleLisp\Eval\_eval;
 use function Che\SimpleLisp\Eval\map;
 use function Che\SimpleLisp\Eval\reduce;
 use function PHPUnit\Framework\assertEquals;
+use function PHPUnit\Framework\assertFalse;
 use function PHPUnit\Framework\assertTrue;
 
 class EvalTest extends TestCase
@@ -56,20 +57,33 @@ class EvalTest extends TestCase
     {
         self::expectExceptionObject(new \Exception('"def" required an even number of arguments, received: 3'));
 
-        _eval([new Symbol('def'), 'a', 1, 'b'], new HashMap());
+        _eval([new Symbol('def'), new Symbol('a'), 1, new Symbol('b')], new HashMap());
     }
 
     public function testDef(): void
     {
         $env = new HashMap();
 
-        self::assertFalse($env->has(new Symbol('a')));
-        self::assertFalse($env->has(new Symbol('b')));
+        assertFalse($env->has(new Symbol('a')));
+        assertFalse($env->has(new Symbol('b')));
 
-        _eval([new Symbol('def'), 'a', 1, 'b', [new Symbol('cond'), true, 10 ,20]], $env);
+        _eval([new Symbol('def'), new Symbol('a'), 1, new Symbol('b'), [new Symbol('cond'), true, 10 ,20]], $env);
 
         assertEquals(1, $env->get(new Symbol('a')));
         assertEquals(10, $env->get(new Symbol('b')));
+    }
+
+    public function testDefRewriteVariable(): void
+    {
+        $env = new HashMap();
+
+        assertFalse($env->has(new Symbol('a')));
+
+        _eval([new Symbol('def'), new Symbol('a'), 1], $env);
+        assertEquals(1, $env->get(new Symbol('a')));
+
+        _eval([new Symbol('def'), new Symbol('a'), 2], $env);
+        assertEquals(2, $env->get(new Symbol('a')));
     }
 
     public function testDo(): void

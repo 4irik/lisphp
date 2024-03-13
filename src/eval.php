@@ -93,7 +93,9 @@ function _handleDefine(array $x, HashMapInterface $env): null
     }
     foreach (array_chunk($x, 2) as [$expSymbol, $exprValue]) {
         $env->put(
-            new Symbol((string)_eval($expSymbol, $env)),
+            $expSymbol instanceof Symbol
+            ? $expSymbol
+            : new Symbol((string)_eval($expSymbol, $env)),
             _eval($exprValue, $env)
         );
     }
