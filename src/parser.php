@@ -17,6 +17,7 @@ use Che\SimpleLisp\Symbol;
  */
 function tokenize(string $program): iterable
 {
+    $program = str_replace('-', '_', $program);
     preg_match_all('/\(|\)|\w+|\"[^"]*\"|[\'=><!*\/+-]+/m', $program, $m, PREG_UNMATCHED_AS_NULL);
 
     return array_values(
