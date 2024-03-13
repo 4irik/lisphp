@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+error_reporting(E_ALL);
+
 use function Che\SimpleLisp\Env\_defaultEnv;
 use function Che\SimpleLisp\Eval\_eval;
 use function Che\SimpleLisp\Parse\parseTokens;
@@ -19,7 +21,11 @@ enum MessageType: string
 
 $env = _defaultEnv();
 
+// todo: подгрузка истории команд
+
 while (true) {
+    $lengthToken = false;
+
     $command = readline('?> ');
 
     if(empty(str_replace(' ', '', $command))) {
@@ -28,27 +34,50 @@ while (true) {
 
     readline_add_history($command);
 
-    if($command[0] === ':') {
-        switch ($command) {
-            case ':quit':
-            case ':q':
-                break 2;
-            case ':env':
-                writeMessage(hmToString($env), MessageType::INFO);
-                continue 2;
-                // todo: загрузка и интерпритация файлов
-            default:
-                writeMessage(sprintf("Unknown command '%s'\n", $command), MessageType::WARNING);
-                continue 2;
-        }
-    }
-
     try {
+        if($command[0] === ':') {
+            switch (true) {
+                case $command === ':quit':
+                case $command === ':q':
+                    break 2;
+                case $command === ':env':
+                case $command === ':e':
+                    writeMessage(hmToString($env), MessageType::INFO);
+                    continue 2;
+                case str_starts_with($command, ':load'):
+                case str_starts_with($command, ':l'):
+                    $fileName = str_replace([':load ', ':l '], '', $command);
+                    if(!file_exists($fileName)) {
+                        throw new Exception(sprintf('File Not Found: "%s"', $fileName));
+                    }
+                    $command = file_get_contents($fileName);
+                    break;
+                case str_starts_with($command, ':tokens'):
+                    $lengthToken = true;
+                    // no break
+                case str_starts_with($command, ':t'):
+                    $command = trim(substr($command, strlen($lengthToken ? ':tokens' : ':t')));
+                    writeMessage(toString(tokenize($command)), MessageType::INFO);
+                    continue 2;
+                case str_starts_with($command, ':parsed_tokens'):
+                    $lengthToken = true;
+                    // no break
+                case str_starts_with($command, ':pt'):
+                    $command = trim(substr($command, strlen($lengthToken ? ':parsed_tokens' : ':pt')));
+                    writeMessage(toString(parseTokens(tokenize($command))), MessageType::INFO);
+                    continue 2;
+                    // todo: очистка истории команд
+                default:
+                    writeMessage(sprintf("Unknown command '%s'\n", $command), MessageType::WARNING);
+                    continue 2;
+            }
+        }
+
         $result = _eval(parseTokens(tokenize($command)), $env);
         $messageType = $result === null ? MessageType::INFO : MessageType::REGULAR;
         $result = $result ?? 'OK';
     } catch (\Throwable $e) {
-        $result = sprintf('%s', $e->getMessage());
+        $result = sprintf("%s\n%s", $e->getMessage(), $e->getTraceAsString());
         $messageType = MessageType::ERROR;
     }
 
@@ -69,7 +98,11 @@ function toString(mixed $value): string
         return sprintf('(%s)', substr($acc, 1));
     }
 
-    return (string)$value;
+    if(is_string($value)) {
+        $value = sprintf('"%s"', $value);
+    }
+
+    return str_replace(["\r", "\n", "\t"], ['\r', '\n', '\t'], (string)$value);
 }
 
 function decorateMessage(string $message, MessageType $type = MessageType::REGULAR): string
@@ -102,7 +135,7 @@ function hmToString(\Traversable $map): string
             continue;
         }
 
-        $acc[] = sprintf('key: %s | value: %s', $key, toString($value));
+        $acc[] = sprintf("\033[0;32m%s\033[0m => \033[0;35m%s\033[0m", $key, toString($value));
     }
 
     return sprintf("=== Global env ===\n%s", implode("\n", $acc));
