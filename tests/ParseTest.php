@@ -19,6 +19,7 @@ class ParseTest extends TestCase
     {
         self::assertEquals(['(', '+', '1', '2', ')'], tokenize('(+ 1 2)'));
         self::assertEquals(['"abc"', '"def"'], tokenize('"abc"   "def"'));
+        self::assertEquals(['\'', 'abc'], tokenize('\'abc'));
     }
 
     #[DataProvider('atomDP')]
@@ -59,24 +60,22 @@ class ParseTest extends TestCase
         ], parseTokens(['(', '+', '1', '(', '-', '10', '1.3', ')', ')']));
     }
 
-//    public function testParseQuote(): void
-//    {
-//        assertEquals([
-//            new Symbol('quote'),
-//            [
-//                new Symbol('abc'),
-//            ]
-//        ], parseTokens(['\'', 'abc']));
-//
-//        assertEquals([
-//            new Symbol('quote'),
-//            [
-//                new Symbol('-'),
-//                10,
-//                1.3
-//            ]
-//        ], parseTokens(['(', '\'', '(', '-', '10', '1.3', ')', ')']));
-//    }
+    public function testParseQuote(): void
+    {
+        assertEquals([
+            new Symbol('quote'),
+            new Symbol('abc'),
+        ], parseTokens(['(', '\'', 'abc', ')']));
+
+        assertEquals([
+            new Symbol('quote'),
+            [
+                new Symbol('-'),
+                10,
+                1.3
+            ]
+        ], parseTokens(['(', '\'', '(', '-', '10', '1.3', ')', ')']));
+    }
 
     public static function atomDP(): iterable
     {
@@ -103,6 +102,11 @@ class ParseTest extends TestCase
         yield 'string' => [
             '"some string"',
             'some string'
+        ];
+
+        yield 'quote' => [
+            '\'',
+            new Symbol('quote')
         ];
 
         yield 'Symbol' => [

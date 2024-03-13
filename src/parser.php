@@ -16,7 +16,7 @@ function tokenize(string $program): iterable
         array_filter(
             explode(
                 ' ',
-                str_replace(['(', ')'], [' ( ', ' ) '], $program)
+                str_replace(['(', ')', '\''], [' ( ', ' ) ', ' \' '], $program)
             )
         )
     );
@@ -39,7 +39,7 @@ function _atom(string $token): int|float|bool|string|Symbol
         return substr($token, 1, -1);
     }
 
-    return new Symbol($token);
+    return new Symbol($token === '\'' ? 'quote' : $token);
 }
 
 function parseTokens(\SplDoublyLinkedList|array  $tokens): int|float|bool|string|Symbol|iterable
