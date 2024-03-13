@@ -24,8 +24,6 @@ $env = _defaultEnv();
 // todo: подгрузка истории команд
 
 while (true) {
-    $lengthToken = false;
-
     $command = readline('?> ');
 
     if(empty(str_replace(' ', '', $command))) {
@@ -51,19 +49,14 @@ while (true) {
                         throw new Exception(sprintf('File Not Found: "%s"', $fileName));
                     }
                     $command = file_get_contents($fileName);
+                    writeMessage(toString(tokenize($command)));
                     break;
-                case str_starts_with($command, ':tokens'):
-                    $lengthToken = true;
-                    // no break
                 case str_starts_with($command, ':t'):
-                    $command = trim(substr($command, strlen($lengthToken ? ':tokens' : ':t')));
+                    $command = trim(substr($command, 2));
                     writeMessage(toString(tokenize($command)), MessageType::INFO);
                     continue 2;
-                case str_starts_with($command, ':parsed_tokens'):
-                    $lengthToken = true;
-                    // no break
                 case str_starts_with($command, ':pt'):
-                    $command = trim(substr($command, strlen($lengthToken ? ':parsed_tokens' : ':pt')));
+                    $command = trim(substr($command, 3));
                     writeMessage(toString(parseTokens(tokenize($command))), MessageType::INFO);
                     continue 2;
                     // todo: очистка истории команд
@@ -105,7 +98,7 @@ function toString(mixed $value): string
     return str_replace(["\r", "\n", "\t"], ['\r', '\n', '\t'], (string)$value);
 }
 
-function decorateMessage(string $message, MessageType $type = MessageType::REGULAR): string
+function decorateMessage(string $message, MessageType $type): string
 {
     [$color, $nc] = match ($type) {
         MessageType::REGULAR => [null, null],
@@ -122,7 +115,7 @@ function decorateMessage(string $message, MessageType $type = MessageType::REGUL
     ]));
 }
 
-function writeMessage(string $message, MessageType $type): void
+function writeMessage(string $message, MessageType $type = MessageType::REGULAR): void
 {
     echo decorateMessage($message, $type). "\n";
 }
