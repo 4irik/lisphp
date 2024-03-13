@@ -27,8 +27,14 @@ function _defaultEnv(): HashMapInterface
     $storage->put(new Symbol('/'), fn (...$x) => reduce($x, fn ($a, $b) => $a / $b));
     $storage->put(new Symbol('max'), fn (...$x) => reduce($x, fn ($a, $b) => max($a, $b)));
     $storage->put(new Symbol('min'), fn (...$x) => reduce($x, fn ($a, $b) => min($a, $b)));
+    $storage->put(new Symbol('mod'), fn (...$x) => reduce($x, fn ($a, $b) => $a % $b));
 
     $storage->put(new Symbol('++'), fn (...$x) => reduce($x, fn ($a, $b) => $a . $b));
+    $storage->put(new Symbol('print'), static function (...$x): null { // todo: непонятно как это проверить
+        $str = reduce($x, fn ($a, $b) => $a . $b);
+        echo $str;
+        return null;
+    });
 
     return $storage;
 }

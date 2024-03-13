@@ -172,5 +172,11 @@ class EnvTest extends TestCase
             'nav-10-t',
             'nav', '-', 10, '-', 't'
         ];
+
+        yield 'mod' => [
+            'mod',
+            3,
+            13, 5
+        ];
     }
 }
