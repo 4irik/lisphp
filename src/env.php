@@ -14,6 +14,8 @@ function _defaultEnv(): HashMapInterface
 {
     $storage = new HashMap();
     $storage->put(new Symbol('='), fn ($a, $b) => $a == $b);
+    $storage->put(new Symbol('>'), fn ($a, $b) => $a > $b);
+    $storage->put(new Symbol('<'), fn ($a, $b) => $a < $b);
     $storage->put(new Symbol('>='), fn ($a, $b) => $a >= $b);
     $storage->put(new Symbol('<='), fn ($a, $b) => $a <= $b);
     $storage->put(new Symbol('<='), fn ($a, $b) => $a <= $b);
