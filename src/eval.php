@@ -81,7 +81,7 @@ function _handleIf(array $x, HashMapInterface $env): mixed
 {
     $cond = $x[1];
     $st_true = $x[2];
-    $st_false = $x[3];
+    $st_false = $x[3] ?? [];
     $exp = _eval($cond, $env) ? $st_true : $st_false;
     return _eval($exp, $env);
 }

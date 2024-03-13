@@ -51,6 +51,8 @@ class EvalTest extends TestCase
 
         assertEquals(10, _eval([new Symbol('cond'), true, 10, 20], $env));
         assertEquals(20, _eval([new Symbol('cond'), false, 10, 20], $env));
+        assertEquals([], _eval([new Symbol('cond'), false, 10], $env));
+        assertEquals([], _eval([new Symbol('cond'), true, [], 20], $env));
     }
 
     public function testDefIllegalArgumentsCount()
