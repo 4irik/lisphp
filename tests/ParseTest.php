@@ -27,6 +27,8 @@ class ParseTest extends TestCase
         self::assertEquals(['(', 'def', 'a', "\"\n \"", ')'], tokenize("(def a \"\n \")"));
         self::assertEquals(['(', 'def', 'a', '""', ')'], tokenize('(def a "")'));
         self::assertEquals(['(', 'def', 'a1_b2', '2', ')'], tokenize('(def a1-b2 2)'));
+        self::assertEquals(['(', '-', '1', '2', ')'], tokenize('(- 1 2)'));
+        self::assertEquals(['(', 'set!', 'a', '2', ')'], tokenize('(set! a 2)'));
         self::assertEquals(['(', 'def', 'a', '"(a)*b"', ')'], tokenize('(def a "(a)*b")'));
     }
 
