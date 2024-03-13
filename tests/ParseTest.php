@@ -22,6 +22,7 @@ class ParseTest extends TestCase
         self::assertEquals(['"abc"', '"def"'], tokenize('"abc"   "def"'));
         self::assertEquals(['\'', 'abc'], tokenize('\'abc'));
         self::assertEquals(['(', '1', '2', ')', '(', 'def', 'b', '2', ')'], tokenize("(1 2)\n\n\n(def b 2)\n\n"));
+        self::assertEquals(['(', 'def', 'test', '1', ')'], tokenize("(def test\n 1)"));
     }
 
     public function testTokenizeZero(): void

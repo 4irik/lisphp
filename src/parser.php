@@ -19,9 +19,12 @@ function tokenize(string $program): iterable
 {
     return array_values(
         array_filter(
-            explode(
-                ' ',
-                str_replace(['(', ')', '\''], [' ( ', ' ) ', ' \' '], $program)
+            array_map(
+                fn (string $item) => trim($item),
+                explode(
+                    ' ',
+                    str_replace(['(', ')', '\''], [' ( ', ' ) ', ' \' '], $program)
+                )
             ),
             fn ($val) => match ($val) {
                 '0' => true,
