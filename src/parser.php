@@ -17,14 +17,17 @@ use Che\SimpleLisp\Symbol;
  */
 function tokenize(string $program): iterable
 {
+    preg_match_all('/\(|\)|\w+|\"[^"]*\"|[\'=><!*\/+-]+/m', $program, $m, PREG_UNMATCHED_AS_NULL);
+
     return array_values(
         array_filter(
             array_map(
                 fn (string $item) => trim($item),
-                explode(
-                    ' ',
-                    str_replace(['(', ')', '\''], [' ( ', ' ) ', ' \' '], $program)
-                )
+                $m[0]
+                //                explode(
+                //                    ' ',
+                //                    str_replace(['(', ')', '\''], [' ( ', ' ) ', ' \' '], $program)
+                //                )
             ),
             fn ($val) => match ($val) {
                 '0' => true,

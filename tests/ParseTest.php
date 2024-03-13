@@ -23,6 +23,9 @@ class ParseTest extends TestCase
         self::assertEquals(['\'', 'abc'], tokenize('\'abc'));
         self::assertEquals(['(', '1', '2', ')', '(', 'def', 'b', '2', ')'], tokenize("(1 2)\n\n\n(def b 2)\n\n"));
         self::assertEquals(['(', 'def', 'test', '1', ')'], tokenize("(def test\n 1)"));
+        self::assertEquals(['(', 'def', 'a', '" "', ')'], tokenize('(def a " ")'));
+        self::assertEquals(['(', 'def', 'a', "\"\n \"", ')'], tokenize("(def a \"\n \")"));
+        self::assertEquals(['(', 'def', 'a', '""', ')'], tokenize('(def a "")'));
     }
 
     public function testTokenizeZero(): void
@@ -110,6 +113,11 @@ class ParseTest extends TestCase
         yield 'string' => [
             '"some string"',
             'some string'
+        ];
+
+        yield 'empty string' => [
+            '""',
+            ''
         ];
 
         yield 'quote' => [
