@@ -11,6 +11,8 @@ use function Che\SimpleLisp\Parse\tokenize;
 
 require_once './vendor/autoload.php';
 
+const HISTORY_FILE_PATH = '.repl_history';
+
 enum MessageType: string
 {
     case REGULAR = '';
@@ -21,7 +23,9 @@ enum MessageType: string
 
 $env = _defaultEnv();
 
-// todo: подгрузка истории команд
+if(file_exists(HISTORY_FILE_PATH)) {
+    readline_read_history(HISTORY_FILE_PATH);
+}
 
 while (true) {
     $command = readline('?> ');
@@ -41,6 +45,10 @@ while (true) {
                 case $command === ':env':
                 case $command === ':e':
                     writeMessage(hmToString($env), MessageType::INFO);
+                    continue 2;
+                case $command === ':ch':
+                    readline_clear_history();
+                    @unlink(HISTORY_FILE_PATH);
                     continue 2;
                 case str_starts_with($command, ':load'):
                 case str_starts_with($command, ':l'):
@@ -76,6 +84,7 @@ while (true) {
 
     writeMessage(toString($result), $messageType);
 }
+readline_write_history(HISTORY_FILE_PATH);
 exit(0);
 
 
