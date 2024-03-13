@@ -18,7 +18,11 @@ function tokenize(string $program): iterable
                 ' ',
                 str_replace(['(', ')', '\''], [' ( ', ' ) ', ' \' '], $program)
             ),
-            fn ($val) => '0' === $val ? true : !empty($val)
+            fn ($val) => match ($val) {
+                '0' => true,
+                "\n", "\r", "\t", "\r\n" => false,
+                default => !in_array(substr($val, 0, 1), ["\n", "\r", "\t"]) && !empty($val)
+            }
         )
     );
 }
