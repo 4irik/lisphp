@@ -75,6 +75,9 @@ if(file_exists(HISTORY_FILE_PATH)) {
     readline_read_history(HISTORY_FILE_PATH);
 }
 
+writeMessage("\n" . str_repeat('=', 53));
+writeMessage("Наберите \033[0;33m:help\033[0m для просмотра списка доступных комманд");
+writeMessage(str_repeat('=', 53) . "\n");
 while (true) {
     $command = readline(ReplMode::instance()->mode->value);
 
@@ -88,11 +91,11 @@ while (true) {
         if($command[0] === ':') {
             switch (true) {
                 // режим экранированного вывода
-                case $command === ':escape':
+                case $command === ':esc':
                     ReplMode::instance()->mode = OutputMode::ESCAPE;
                     continue 2;
                     // режим экранированного вывода
-                case $command === ':unescape':
+                case $command === ':unesc':
                     ReplMode::instance()->mode = OutputMode::UNESCAPE;
                     continue 2;
                     // выход
@@ -133,6 +136,17 @@ while (true) {
                 case str_starts_with($command, ':pt'):
                     $command = trim(substr($command, 3));
                     writeMessage(toString(parseTokens(tokenize($command))), MessageType::INFO);
+                    continue 2;
+                case $command === ':help':
+                    writeMessage("Список доступных комманд:");
+                    writeMessage("\033[0;32m:esc\033[0m - режим экранированного вывода в `repl`");
+                    writeMessage("\033[0;32m:unesc \033[0m - режим неэкранированного вывода в `repl`");
+                    writeMessage("\033[0;32m:q, :quit \033[0m - выход");
+                    writeMessage("\033[0;32m:e\033[0m - рекурсивный вывод переменных окружения (пример `:e 1 2`, где `1` - уровень вложенности, `2` - порядковый номер на уровне)");
+                    writeMessage("\033[0;32m:l, :load\033[0m - загрузка и исполнение файла (пример `:load programs/fib`)");
+                    writeMessage("\033[0;32m:t\033[0m - показать токены строки (`:t (def a 123)`)");
+                    writeMessage("\033[0;32m:pt\033[0m - показать сформированныую команду из строки (`:pt (def a 123)`)");
+                    writeMessage("\033[0;32m:help\033[0m - отображение этой справки");
                     continue 2;
                 default:
                     writeMessage(sprintf("Unknown command '%s'\n", $command), MessageType::WARNING);
