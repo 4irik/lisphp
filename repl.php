@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 error_reporting(E_ALL);
 
+use Che\SimpleLisp\HashMap;
 use Che\SimpleLisp\HashMapInterface;
+
+use Che\SimpleLisp\Symbol;
 
 use function Che\SimpleLisp\Env\_defaultEnv;
 use function Che\SimpleLisp\Eval\_eval;
@@ -46,8 +49,29 @@ enum MessageType: string
     case WARNING = 'Warning';
     case ERROR = 'Error';
 }
+$env = new class (_defaultEnv()) extends HashMap {
+    #[\Override] public function getIterator(): \Traversable
+    {
+        $iterate = static function (HashMapInterface $map, int $level = 0, int $number = 0) use (&$iterate): \Generator {
+            yield [$level, $number] => $level === 0 ? $map->iterateMap() : $map->getIterator();
 
-$env = _defaultEnv();
+            $level += 1;
+            foreach ($map->childList() as $objItem) {
+                foreach ($iterate($objItem, $level, $number) as $key => $item) {
+                    yield $key => $item;
+                }
+                $number += 1;
+            }
+        };
+
+        return $iterate($this);
+    }
+
+    private function iterateMap(): \Traversable
+    {
+        return parent::getIterator();
+    }
+};
 
 if(file_exists(HISTORY_FILE_PATH)) {
     readline_read_history(HISTORY_FILE_PATH);
@@ -174,15 +198,23 @@ function writeMessage(string $message, MessageType $type = MessageType::REGULAR)
 function hmToString(\Traversable $map): string
 {
     $acc = [];
-    foreach ($map as $key => $value) {
-        if(is_callable($value)) {
-            continue;
+    foreach ($map as $hmKey => $iterable) {
+        [$level, $number] = $hmKey;
+
+        $buf = [];
+        foreach ($iterable as $key => $value) {
+            if(is_callable($value)) {
+                $value = 'closure';
+            }
+
+            $buf[] = sprintf("\033[0;32m%s\033[0m => \033[0;35m%s\033[0m", $key, toString($value));
         }
 
-        $acc[] = sprintf("\033[0;32m%s\033[0m => \033[0;35m%s\033[0m", $key, toString($value));
+        $acc[] = sprintf("===level: %d | number: %d===\n%s", $level, $number, implode("\n", $buf));
+        ;
     }
 
-    return sprintf("=== Global env ===\n%s", implode("\n", $acc));
+    return implode("\n", $acc);
 }
 
 function __eval(string $command, HashMapInterface $env): mixed

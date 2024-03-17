@@ -6,7 +6,32 @@ namespace Che\SimpleLisp;
 
 class HashMap implements HashMapInterface, \IteratorAggregate
 {
-    private array $_map;
+    private array $_map = [];
+
+    private ?self $parent = null;
+
+    /**
+     * @var self[]
+     */
+    private array $child = [];
+
+    public function __construct(?self $parent = null)
+    {
+        $this->parent = $parent;
+        if($parent !== null) {
+            $parent->child[] = $this;
+        }
+    }
+
+    public function parent(): ?self
+    {
+        return $this->parent;
+    }
+
+    public function childList(): array
+    {
+        return $this->child;
+    }
 
     public function has(Symbol $symbol): bool
     {

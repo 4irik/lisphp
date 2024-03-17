@@ -4,6 +4,10 @@ namespace Che\SimpleLisp;
 
 interface HashMapInterface
 {
+    public function parent(): ?self;
+
+    public function childList(): array;
+
     public function has(Symbol $symbol): bool;
 
     public function get(Symbol $symbol): mixed;
