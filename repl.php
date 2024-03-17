@@ -102,9 +102,14 @@ while (true) {
                 case $command === ':q':
                     break 2;
                     // переменные окружения
-                case $command === ':env':
-                case $command === ':e':
-                    writeMessage(hmToString($env), MessageType::INFO);
+                case str_starts_with($command, ':e'):
+                    $c = explode(' ', $command);
+                    $toInt = static function (array $arr, int $key): ?int {
+                        return isset($arr[$key])
+                            ? (int)$arr[$key]
+                            : null;
+                    };
+                    writeMessage(hmToString($env, $toInt($c, 1), $toInt($c, 2)), MessageType::INFO);
                     continue 2;
                     // очистка истории
                 case $command === ':ch':
@@ -195,11 +200,20 @@ function writeMessage(string $message, MessageType $type = MessageType::REGULAR)
     echo decorateMessage($message, $type). "\n";
 }
 
-function hmToString(\Traversable $map): string
+function hmToString(\Traversable $map, ?int $showLevel = null, ?int $showNumber = null): string
 {
+    $hideEnv = fn (?int $filterArg, int $filteredArg): bool => $filterArg !== null && $filterArg !== $filteredArg;
+
     $acc = [];
     foreach ($map as $hmKey => $iterable) {
         [$level, $number] = $hmKey;
+
+        if($hideEnv($showLevel, $level)) {
+            continue;
+        }
+        if($hideEnv($showNumber, $number)) {
+            continue;
+        }
 
         $buf = [];
         foreach ($iterable as $key => $value) {
