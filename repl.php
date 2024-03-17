@@ -7,8 +7,6 @@ error_reporting(E_ALL);
 use Che\SimpleLisp\HashMap;
 use Che\SimpleLisp\HashMapInterface;
 
-use Che\SimpleLisp\Symbol;
-
 use function Che\SimpleLisp\Env\_defaultEnv;
 use function Che\SimpleLisp\Eval\_eval;
 use function Che\SimpleLisp\Parse\parseTokens;
