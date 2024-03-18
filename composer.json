@@ -26,6 +26,7 @@
         "friendsofphp/php-cs-fixer": "^3.5"
     },
     "require": {
-        "php": "^8.3"
+        "php": "^8.3",
+        "ext-readline": "*"
     }
 }
