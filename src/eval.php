@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Che\SimpleLisp\Eval;
 
+use Che\SimpleLisp\HashMap;
 use Che\SimpleLisp\HashMapInterface;
 use Che\SimpleLisp\Symbol;
 
@@ -42,15 +43,37 @@ function map(iterable $list, \Closure $f): iterable
     }
 }
 
+function envForSymbol(Symbol $s, HashMapInterface $env): HashMapInterface
+{
+    $isDetected = false;
+    $startEnv = $env;
+
+    while (true) {
+        if($env->has($s)) {
+            $isDetected = true;
+            break;
+        }
+
+        if($env->parent() === null) {
+            break;
+        }
+
+        $env = $env->parent();
+    }
+
+    return $isDetected ? $env : $startEnv;
+}
+
 function _eval(mixed $x, HashMapInterface $env): mixed
 {
     if(is_scalar($x)) {
         return $x;
     }
 
-    if(is_object($x) && $x instanceof Symbol) {
-        return $env->has($x)
-            ? $env->get($x)
+    if($x instanceof Symbol) {
+        $symbolEnv = envForSymbol($x, $env);
+        return $symbolEnv->has($x)
+            ? $symbolEnv->get($x)
             : $x;
     }
 
@@ -59,12 +82,14 @@ function _eval(mixed $x, HashMapInterface $env): mixed
             return $x;
         }
 
-        return match ((string) $x[0]) {
+        $first  = $x[0];
+        return match (is_array($first) ? null : (string) $x[0]) {
             'cond' => _handleIf($x, $env),
-            'def', 'set!' => _handleDefine($x, $env),
+            'def' => _handleDefine($x, $env),
+            'set!' => _handleSet($x, $env),
             'do' => _handleDo($x, $env),
             'quote' => $x[1],
-            //            'lambda' => _handleLambda($x, $env),
+            'lambda', 'λ' => _handleLambda($x, $env),
             //            'map' => _handleMap($x, $env),
             'eval' => _eval(_eval($x[1], $env), $env),
             default => _handleProcedure($x, $env),
@@ -106,6 +131,25 @@ function _handleDefine(array $x, HashMapInterface $env): null
     return null;
 }
 
+function _handleSet(array $x, HashMapInterface $env): null
+{
+    array_shift($x);
+    if(count($x) % 2 != 0) {
+        throw new \Exception(sprintf('"set!" required an even number of arguments, received: %d', count($x)));
+    }
+
+    foreach (array_chunk($x, 2) as [$expSymbol, $exprValue]) {
+        $symbol = $expSymbol instanceof Symbol
+            ? $expSymbol
+            : new Symbol((string)_eval($expSymbol, $env));
+
+        $envForSymbol = envForSymbol($symbol, $env);
+        $envForSymbol->put($symbol, _eval($exprValue, $env));
+    }
+
+    return null;
+}
+
 /**
  * @throws \Exception
  */
@@ -124,8 +168,25 @@ function _handleDo(array $x, HashMapInterface $env): mixed
 function _handleProcedure(array $x, HashMapInterface $env): mixed
 {
     $proc = _eval(array_shift($x), $env);
-    $args = map($x, fn ($item) => _eval($item, $env));
-    return is_scalar($proc)
-        ? [$proc, ...$args]
-        : $proc(...$args);
+    $args = iterator_to_array(map($x, fn ($item) => _eval($item, $env)));
+    return is_callable($proc)
+        ? $proc(...$args)
+        : [$proc, ...$args];
+}
+
+function _handleLambda(array $x, HashMapInterface $env): \Closure
+{
+    return static function (...$args) use ($x, $env): mixed {
+        $localEnv = new HashMap($env);
+
+        $argsVar = $x[1];
+        foreach ($argsVar as $key => $argVarItem) {
+            $localEnv->put(
+                $argVarItem instanceof Symbol ? $argVarItem : new Symbol((string)_eval($argVarItem, $env)),
+                _eval($args[$key], $env)
+            );
+        }
+
+        return _eval($x[2], $localEnv);
+    };
 }
