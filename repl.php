@@ -137,6 +137,10 @@ while (true) {
                     $command = trim(substr($command, 3));
                     writeMessage(toString(parseTokens(tokenize($command))), MessageType::INFO);
                     continue 2;
+                case $command === ':gc':
+                    gc_collect_cycles();
+                    writeMessage('GC launched', MessageType::INFO);
+                    continue 2;
                 case $command === ':help':
                     writeMessage("Список доступных комманд:");
                     writeMessage("\033[0;32m:esc\033[0m - режим экранированного вывода в `repl`");
@@ -146,6 +150,7 @@ while (true) {
                     writeMessage("\033[0;32m:l, :load\033[0m - загрузка и исполнение файла (пример `:load programs/fib`)");
                     writeMessage("\033[0;32m:t\033[0m - показать токены строки (`:t (def a 123)`)");
                     writeMessage("\033[0;32m:pt\033[0m - показать сформированныую команду из строки (`:pt (def a 123)`)");
+                    writeMessage("\033[0;32m:gc\033[0m - принудительный запуск сборщика мусора");
                     writeMessage("\033[0;32m:help\033[0m - отображение этой справки");
                     continue 2;
                 default:
