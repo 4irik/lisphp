@@ -7,6 +7,8 @@ error_reporting(E_ALL);
 use Che\SimpleLisp\HashMap;
 use Che\SimpleLisp\HashMapInterface;
 
+use Che\SimpleLisp\Symbol;
+
 use function Che\SimpleLisp\Env\_defaultEnv;
 use function Che\SimpleLisp\Eval\_eval;
 use function Che\SimpleLisp\Parse\parseTokens;
@@ -183,6 +185,10 @@ function toString(mixed $value): string
         }
 
         return sprintf('(%s)', substr($acc, 1));
+    }
+
+    if(is_bool($value)) {
+        $value = new Symbol($value ? '#t' : '#f');
     }
 
     if(ReplMode::instance()->mode === OutputMode::UNESCAPE) {
