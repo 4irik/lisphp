@@ -11,15 +11,16 @@ class HashMap implements HashMapInterface, \IteratorAggregate
     private ?self $parent = null;
 
     /**
-     * @var self[]
+     * @var \WeakMap<self>
      */
-    private array $child = [];
+    private \WeakMap $child;
 
     public function __construct(?self $parent = null)
     {
         $this->parent = $parent;
+        $this->child = new \WeakMap();
         if($parent !== null) {
-            $parent->child[] = $this;
+            $parent->child[$this] = $this;
         }
     }
 
@@ -28,7 +29,7 @@ class HashMap implements HashMapInterface, \IteratorAggregate
         return $this->parent;
     }
 
-    public function childList(): array
+    public function childList(): \WeakMap
     {
         return $this->child;
     }

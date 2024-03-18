@@ -6,7 +6,10 @@ interface HashMapInterface
 {
     public function parent(): ?self;
 
-    public function childList(): array;
+    /**
+     * @return iterable<self>
+     */
+    public function childList(): iterable;
 
     public function has(Symbol $symbol): bool;
 
