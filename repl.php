@@ -191,6 +191,10 @@ function toString(mixed $value): string
         $value = new Symbol($value ? '#t' : '#f');
     }
 
+    if($value instanceof \Closure) {
+        $value = 'closure';
+    }
+
     if(ReplMode::instance()->mode === OutputMode::UNESCAPE) {
         return (string)$value;
     }
