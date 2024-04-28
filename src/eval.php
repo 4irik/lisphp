@@ -6,6 +6,7 @@ namespace Che\SimpleLisp\Eval;
 
 use Che\SimpleLisp\HashMap;
 use Che\SimpleLisp\HashMapInterface;
+use Che\SimpleLisp\Procedure;
 use Che\SimpleLisp\Symbol;
 
 /**
@@ -82,16 +83,16 @@ function _eval(mixed $x, HashMapInterface $env): mixed
             return $x;
         }
 
-        $first  = $x[0];
-        return match (is_array($first) ? null : (string) $x[0]) {
-            'cond' => _handleIf($x, $env),
-            'def' => _handleDefine($x, $env),
-            'set!' => _handleSet($x, $env),
-            'do' => _handleDo($x, $env),
-            'quote' => $x[1],
-            'lambda', 'λ' => _handleLambda($x, $env),
-            //            'map' => _handleMap($x, $env),
-            'eval' => _eval(_eval($x[1], $env), $env),
+        $procedure  = Procedure::tryFrom(is_array($x[0]) ? '' : (string)$x[0]);
+        return match ($procedure) {
+            Procedure::COND => _handleIf($x, $env),
+            Procedure::DEF => _handleDefine($x, $env),
+            Procedure::SET => _handleSet($x, $env),
+            Procedure::DO => _handleDo($x, $env),
+            Procedure::QUOTE => $x[1],
+            Procedure::LAMBDA => _handleLambda($x, $env),
+            Procedure::MACRO => _handleMacro($x, $env),
+            Procedure::EVAL => _eval(_eval($x[1], $env), $env),
             default => _handleProcedure($x, $env),
         };
     }
