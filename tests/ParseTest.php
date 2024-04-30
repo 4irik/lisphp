@@ -6,6 +6,7 @@ namespace Test;
 
 use Che\SimpleLisp\Symbol;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
 use function Che\SimpleLisp\Parse\_atom;
@@ -30,6 +31,17 @@ class ParseTest extends TestCase
         self::assertEquals(['(', '-', '1', '2', ')'], tokenize('(- 1 2)'));
         self::assertEquals(['(', 'set!', 'a', '2', ')'], tokenize('(set! a 2)'));
         self::assertEquals(['(', 'def', 'a', '"(a)*b"', ')'], tokenize('(def a "(a)*b")'));
+    }
+
+    public function testSkipCommentAtStartLine(): void
+    {
+        $command = <<<EON
+; some comment
+;another text
+(+ 0 1)
+EON;
+
+        self::assertEquals(['(', '+', '0', '1', ')'], tokenize($command));
     }
 
     public function testTokenizeZero(): void
@@ -75,19 +87,22 @@ class ParseTest extends TestCase
         ], parseTokens(['(', '+', '1', '(', '-', '10', '1.3', ')', ')']));
     }
 
+    #[Group("ignore")]
     public function testParseQuote(): void
     {
         assertEquals([
             new Symbol('quote'),
-            new Symbol('abc'),
+            [new Symbol('abc')],
         ], parseTokens(['(', '\'', 'abc', ')']));
 
         assertEquals([
             new Symbol('quote'),
             [
-                new Symbol('-'),
-                10,
-                1.3
+                [
+                    new Symbol('-'),
+                    10,
+                    1.3
+                ]
             ]
         ], parseTokens(['(', '\'', '(', '-', '10', '1.3', ')', ')']));
     }

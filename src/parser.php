@@ -22,12 +22,15 @@ function tokenize(string $program): iterable
     $program = str_replace('-', '_', $program);
     $program = str_replace('||||', '(-', $program);
 
+    // удаляем комментарии
+    $program = preg_replace('/^;.*/m', '', $program);
+
     preg_match_all('/\(|\)|\w+\!?|\"[^"]*\"|[\'=><!*\/+-]+/m', $program, $m, PREG_UNMATCHED_AS_NULL);
 
     return array_values(
         array_filter(
             array_map(
-                fn (string $item) => trim($item),
+                fn (string $item): string => trim($item),
                 $m[0]
                 //                explode(
                 //                    ' ',
