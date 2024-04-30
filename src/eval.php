@@ -168,11 +168,21 @@ function _handleDo(array $x, HashMapInterface $env): mixed
 
 function _handleProcedure(array $x, HashMapInterface $env): mixed
 {
-    $proc = _eval(array_shift($x), $env);
-    $args = iterator_to_array(map($x, fn ($item) => _eval($item, $env)));
-    return is_callable($proc)
-        ? $proc(...$args)
-        : [$proc, ...$args];
+    $procDef = array_shift($x);
+    $procInstance = _eval($procDef, $env);
+
+    $args = static function (iterable $args) use ($procDef, $env): array {
+        $procName = (string)(is_array($procDef) ? $procDef[0] : '');
+
+        return match (Procedure::tryFrom($procName)) {
+            Procedure::MACRO => $args,
+            default => iterator_to_array(map($args, fn ($item) => _eval($item, $env)))
+        };
+    };
+
+    return is_callable($procInstance)
+        ? $procInstance(...$args($x))
+        : [$procInstance, ...$args($x)];
 }
 
 function _handleLambda(array $x, HashMapInterface $env): \Closure
@@ -189,5 +199,23 @@ function _handleLambda(array $x, HashMapInterface $env): \Closure
         }
 
         return _eval($x[2], $localEnv);
+    };
+}
+
+function _handleMacro(array $x, HashMapInterface $env): \Closure
+{
+    return static function (...$args) use ($x, $env): mixed {
+        $argsVar = $x[1];
+        $body = $x[2];
+        foreach ($argsVar as $argVarKey => $argVarName) {
+            $paramValueItem = $args[$argVarKey];
+            array_walk_recursive($body, static function (&$bodyItem) use ($argVarName, $paramValueItem): void {
+                if($bodyItem instanceof Symbol && $bodyItem == $argVarName) {
+                    $bodyItem = $paramValueItem;
+                }
+            });
+        }
+
+        return _eval($body, $env);
     };
 }

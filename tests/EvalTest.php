@@ -9,6 +9,7 @@ use Che\SimpleLisp\Symbol;
 use PHPUnit\Framework\TestCase;
 
 use function Che\SimpleLisp\Eval\_eval;
+use function Che\SimpleLisp\Eval\_handleLambda;
 use function Che\SimpleLisp\Eval\envForSymbol;
 use function Che\SimpleLisp\Eval\map;
 use function Che\SimpleLisp\Eval\reduce;
@@ -371,5 +372,55 @@ class EvalTest extends TestCase
             [new Symbol('o1'), [new Symbol('quote'), new Symbol('get')]],
             ""
         ], $env));
+    }
+
+    public function testMacro(): void
+    {
+        $env = new HashMap();
+        $env->put(new Symbol('+'), fn (...$x) => reduce($x, fn ($a, $b) => $a + $b));
+        $env->put(new Symbol('l1'), _handleLambda(['', [], 10], $env));
+
+        assertEquals(
+            5,
+            _eval([
+                [
+                    new Symbol('macro'),
+                    [
+                        new Symbol('x'),
+                        new Symbol('y'),
+                    ],
+                    [
+                        new Symbol('cond'),
+                        true,
+                        new Symbol('x'),
+                        [new Symbol('y')],
+                    ],
+                ],
+                [new Symbol('+'), 2, 3], new Symbol('l1')
+            ], $env)
+        );
+        assertEquals(0, $env->childList()->count());
+
+        assertEquals(
+            10,
+            _eval([
+                [
+                    new Symbol('macro'),
+                    [
+                        new Symbol('x'),
+                        new Symbol('y'),
+                    ],
+                    [
+                        new Symbol('cond'),
+                        false,
+                        new Symbol('x'),
+                        [new Symbol('y')],
+                    ],
+                ],
+                [new Symbol('+'), 3, 3],
+                new Symbol('l1')
+            ], $env)
+        );
+        assertEquals(1, $env->childList()->count());
     }
 }
