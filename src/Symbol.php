@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace Che\SimpleLisp;
 
-final readonly class Symbol
+final readonly class Symbol implements \Stringable
 {
-    public string $hash;
-
     public function __construct(public string $name)
     {
-        $this->hash = hash('crc32', $this->name);
     }
 
     public function __toString(): string
