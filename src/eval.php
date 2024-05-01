@@ -93,11 +93,27 @@ function _eval(mixed $x, HashMapInterface $env): mixed
             Procedure::LAMBDA => _handleLambda($x, $env),
             Procedure::MACRO => _handleMacro($x, $env),
             Procedure::EVAL => _eval(_eval($x[1], $env), $env),
+            Procedure::TYPEOF => _typeOf($x[1], $env),
             default => _handleProcedure($x, $env),
         };
     }
 
     throw new \Exception('Unknown expression type: $x');
+}
+
+function _typeOf(Symbol|array|int|float|string|bool|Lambda|Macro $x): string
+{
+    return match (true) {
+        is_int($x) => 'int',
+        is_float($x) => 'float',
+        is_string($x) => 'str',
+        is_bool($x) => 'bool',
+        is_array($x) => 'ConsList',
+        $x instanceof Symbol => 'Symbol',
+        $x instanceof Lambda => 'Lambda',
+        $x instanceof Macro => 'Macro',
+        default => throw new \Exception('Undefined type of $x')
+    };
 }
 
 /**
@@ -185,28 +201,43 @@ function _handleProcedure(array $x, HashMapInterface $env): mixed
         : [$procInstance, ...$args($x)];
 }
 
-function _handleLambda(array $x, HashMapInterface $env): \Closure
+final readonly class Lambda
 {
-    return static function (...$args) use ($x, $env): mixed {
-        $localEnv = new HashMap($env);
+    public function __construct(private array $list, private HashMapInterface $env)
+    {
+    }
 
-        $argsVar = $x[1];
+    public function __invoke(...$args): mixed
+    {
+        $localEnv = new HashMap($this->env);
+
+        $argsVar = $this->list[1];
         foreach ($argsVar as $key => $argVarItem) {
             $localEnv->put(
-                $argVarItem instanceof Symbol ? $argVarItem : new Symbol((string)_eval($argVarItem, $env)),
-                _eval($args[$key], $env)
+                $argVarItem instanceof Symbol ? $argVarItem : new Symbol((string)_eval($argVarItem, $this->env)),
+                _eval($args[$key], $this->env)
             );
         }
 
-        return _eval($x[2], $localEnv);
-    };
+        return _eval($this->list[2], $localEnv);
+    }
 }
 
-function _handleMacro(array $x, HashMapInterface $env): \Closure
+function _handleLambda(array $x, HashMapInterface $env): Lambda
 {
-    return static function (...$args) use ($x, $env): mixed {
-        $argsVar = $x[1];
-        $body = $x[2];
+    return new Lambda($x, $env);
+}
+
+final readonly class Macro
+{
+    public function __construct(private array $list, private HashMapInterface $env)
+    {
+    }
+
+    public function __invoke(...$args)
+    {
+        $argsVar = $this->list[1];
+        $body = $this->list[2];
         foreach ($argsVar as $argVarKey => $argVarName) {
             $paramValueItem = $args[$argVarKey];
             array_walk_recursive($body, static function (&$bodyItem) use ($argVarName, $paramValueItem): void {
@@ -216,6 +247,11 @@ function _handleMacro(array $x, HashMapInterface $env): \Closure
             });
         }
 
-        return _eval($body, $env);
-    };
+        return _eval($body, $this->env);
+    }
+}
+
+function _handleMacro(array $x, HashMapInterface $env): Macro
+{
+    return new Macro($x, $env);
 }

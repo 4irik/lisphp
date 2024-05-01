@@ -12,6 +12,7 @@ enum Procedure: string
     case LAMBDA = 'lambda';
     case MACRO = 'macro';
     case EVAL = 'eval';
+    case TYPEOF = 'typeof';
 
     case EQUAL = '=';
     case GT = '>';

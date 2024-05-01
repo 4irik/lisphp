@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace Test;
 
+use Che\SimpleLisp\Eval\Lambda;
+use Che\SimpleLisp\Eval\Macro;
 use Che\SimpleLisp\HashMap;
 use Che\SimpleLisp\Symbol;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 use function Che\SimpleLisp\Eval\_eval;
 use function Che\SimpleLisp\Eval\_handleLambda;
+use function Che\SimpleLisp\Eval\_typeOf;
 use function Che\SimpleLisp\Eval\envForSymbol;
 use function Che\SimpleLisp\Eval\map;
 use function Che\SimpleLisp\Eval\reduce;
@@ -147,6 +151,24 @@ class EvalTest extends TestCase
         assertEquals(new Symbol('b'), _eval(new Symbol('b'), $env1));
         assertEquals('a2_1', _eval(new Symbol('a'), $env2));
         assertEquals('b2_2', _eval(new Symbol('b'), $env2));
+    }
+
+    #[DataProvider("typeOfDP")]
+    public function testTypeOf(mixed $value, string $expectedType): void
+    {
+        assertEquals($expectedType, _typeOf($value));
+    }
+
+    public static function typeOfDP(): iterable
+    {
+        yield 'int' => [123, 'int'];
+        yield 'float' => [123.1, 'float'];
+        yield 'string' => ["abc", 'str'];
+        yield 'boolean' => [true, 'bool'];
+        yield 'list' => [[1,2,3], 'ConsList'];
+        yield 'Symbol' => [new Symbol('a'), 'Symbol'];
+        yield 'lambda' => [new Lambda(['lambda', [], 10], new HashMap()), 'Lambda'];
+        yield 'macro' => [new Macro(['macro', [], 10], new HashMap()), 'Macro'];
     }
 
     public function testDo(): void
