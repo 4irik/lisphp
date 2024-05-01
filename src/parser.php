@@ -113,5 +113,12 @@ function _parseTokens(\SplDoublyLinkedList $tokens): int|float|bool|string|Symbo
         return $elements;
     }
 
+    if($token === '\'') {
+        return [
+            _atom($token),
+            _parseTokens($tokens),
+        ];
+    }
+
     return _atom($token);
 }

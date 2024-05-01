@@ -77,24 +77,21 @@ EON;
         ], parseTokens(['(', '+', '1', '(', '-', '10', '1.3', ')', ')']));
     }
 
-    #[Group("ignore")]
-    public function testParseQuote(): void
+    public function testParseShortQuote(): void
     {
         assertEquals([
             new Symbol('quote'),
-            [new Symbol('abc')],
-        ], parseTokens(['(', '\'', 'abc', ')']));
+            new Symbol('abc')
+        ], parseTokens(['\'', 'abc']));
 
         assertEquals([
             new Symbol('quote'),
             [
-                [
-                    new Symbol('-'),
-                    10,
-                    1.3
-                ]
+                new Symbol('-'),
+                10,
+                1.3
             ]
-        ], parseTokens(['(', '\'', '(', '-', '10', '1.3', ')', ')']));
+        ], parseTokens(['\'', '(', '-', '10', '1.3', ')']));
     }
 
     public static function tokenDP(): iterable
