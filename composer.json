@@ -16,7 +16,7 @@
         }
     },
     "scripts": {
-        "test": "@php vendor/bin/phpunit -c phpunit.xml tests",
+        "test": "@php vendor/bin/phpunit -c phpunit.xml --display-errors --display-notices --display-warnings --exclude-group ignore tests",
         "type-check": "@php vendor/bin/phpstan analyse -c phpstan.neon",
         "style-fix": "@php vendor/bin/php-cs-fixer fix"
     },
