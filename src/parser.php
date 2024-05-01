@@ -32,10 +32,10 @@ function tokenize(string $program): iterable
             array_map(
                 fn (string $item): string => trim($item),
                 $m[0]
-                //                explode(
-                //                    ' ',
-                //                    str_replace(['(', ')', '\''], [' ( ', ' ) ', ' \' '], $program)
-                //                )
+                //                                explode(
+                //                                    ' ',
+                //                                    str_replace(['(', ')', '\''], [' ( ', ' ) ', ' \' '], $program)
+                //                                )
             ),
             fn ($val) => match ($val) {
                 '0' => true,
@@ -55,10 +55,10 @@ function _atom(string $token): int|float|bool|string|Symbol
         return is_int($token) ? (int)$token : (float) $token;
     }
 
-    if($token === '#t') {
+    if($token === 'true') {
         return true;
     }
-    if($token === '#f') {
+    if($token === 'false') {
         return false;
     }
 

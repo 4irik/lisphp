@@ -17,20 +17,10 @@ use function PHPUnit\Framework\assertEquals;
 
 class ParseTest extends TestCase
 {
-    public function testTokenizer(): void
+    #[DataProvider("tokenDP")]
+    public function testTokenizer(array $expectedList, string $program): void
     {
-        self::assertEquals(['(', '+', '1', '2', ')'], tokenize('(+ 1 2)'));
-        self::assertEquals(['"abc"', '"def"'], tokenize('"abc"   "def"'));
-        self::assertEquals(['\'', 'abc'], tokenize('\'abc'));
-        self::assertEquals(['(', '1', '2', ')', '(', 'def', 'b', '2', ')'], tokenize("(1 2)\n\n\n(def b 2)\n\n"));
-        self::assertEquals(['(', 'def', 'test', '1', ')'], tokenize("(def test\n 1)"));
-        self::assertEquals(['(', 'def', 'a', '" "', ')'], tokenize('(def a " ")'));
-        self::assertEquals(['(', 'def', 'a', "\"\n \"", ')'], tokenize("(def a \"\n \")"));
-        self::assertEquals(['(', 'def', 'a', '""', ')'], tokenize('(def a "")'));
-        self::assertEquals(['(', 'def', 'a1_b2', '2', ')'], tokenize('(def a1-b2 2)'));
-        self::assertEquals(['(', '-', '1', '2', ')'], tokenize('(- 1 2)'));
-        self::assertEquals(['(', 'set!', 'a', '2', ')'], tokenize('(set! a 2)'));
-        self::assertEquals(['(', 'def', 'a', '"(a)*b"', ')'], tokenize('(def a "(a)*b")'));
+        self::assertEquals($expectedList, tokenize($program));
     }
 
     public function testSkipCommentAtStartLine(): void
@@ -107,39 +97,55 @@ EON;
         ], parseTokens(['(', '\'', '(', '-', '10', '1.3', ')', ')']));
     }
 
+    public static function tokenDP(): iterable
+    {
+        yield [['(', '+', '1', '2', ')'], '(+ 1 2)'];
+        yield [['"abc"', '"def"'], '"abc"   "def"'];
+        yield [['\'', 'abc'], '\'abc'];
+        yield [['(', '1', '2', ')', '(', 'def', 'b', '2', ')'], "(1 2)\n\n\n(def b 2)\n\n"];
+        yield [['(', 'def', 'test', '1', ')'], "(def test\n 1)"];
+        yield [['(', 'def', 'a', '" "', ')'], '(def a " ")'];
+        yield [['(', 'def', 'a', "\"\n \"", ')'], "(def a \"\n \")"];
+        yield [['(', 'def', 'a', '""', ')'], '(def a "")'];
+        yield [['(', 'def', 'a1_b2', '2', ')'], '(def a1-b2 2)'];
+        yield [['(', '-', '1', '2', ')'], '(- 1 2)'];
+        yield [['(', 'set!', 'a', '2', ')'], '(set! a 2)'];
+        yield [['(', 'def', 'a', '"(a)*b"', ')'], '(def a "(a)*b")'];
+    }
+
     public static function atomDP(): iterable
     {
-        yield 'int' => [
+        yield 'Int' => [
             '13',
             13
         ];
 
-        yield 'float' => [
+        yield 'Float' => [
             '13.1',
             13.1
         ];
 
         yield 'True' => [
-            '#t',
+            'true',
             true
         ];
 
-        yield 'false' => [
-            '#f',
+        yield 'False' => [
+            'false',
             false
         ];
 
-        yield 'string' => [
+        yield 'String' => [
             '"some string"',
             'some string'
         ];
 
-        yield 'empty string' => [
+        yield 'Empty string' => [
             '""',
             ''
         ];
 
-        yield 'quote' => [
+        yield 'Quote short' => [
             '\'',
             new Symbol('quote')
         ];
