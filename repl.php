@@ -188,7 +188,7 @@ function toString(mixed $value): string
     }
 
     if(is_bool($value)) {
-        $value = new Symbol($value ? '#t' : '#f');
+        $value = new Symbol($value ? 'true' : 'false');
     }
 
     if($value instanceof \Closure) {
