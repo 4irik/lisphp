@@ -201,12 +201,20 @@ function _handleProcedure(array $x, HashMapInterface $env): mixed
         : [$procInstance, ...$args($x)];
 }
 
-final readonly class Lambda
+abstract readonly class Closure implements \IteratorAggregate
 {
-    public function __construct(private array $list, private HashMapInterface $env)
+    public function __construct(protected array $list, protected HashMapInterface $env)
     {
     }
 
+    #[\Override] public function getIterator(): \Traversable
+    {
+        return new \ArrayIterator($this->list);
+    }
+}
+
+final readonly class Lambda extends Closure
+{
     public function __invoke(...$args): mixed
     {
         $localEnv = new HashMap($this->env);
@@ -228,12 +236,8 @@ function _handleLambda(array $x, HashMapInterface $env): Lambda
     return new Lambda($x, $env);
 }
 
-final readonly class Macro
+final readonly class Macro extends Closure
 {
-    public function __construct(private array $list, private HashMapInterface $env)
-    {
-    }
-
     public function __invoke(...$args)
     {
         $argsVar = $this->list[1];

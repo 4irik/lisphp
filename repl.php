@@ -244,15 +244,10 @@ function hmToString(\Traversable $map, ?int $showLevel = null, ?int $showNumber 
 
         $buf = [];
         foreach ($iterable as $key => $value) {
-            if(is_callable($value)) {
-                $value = 'closure';
-            }
-
             $buf[] = sprintf("\033[0;32m%s\033[0m => \033[0;35m%s\033[0m", $key, toString($value));
         }
 
         $acc[] = sprintf("===level: %d | number: %d===\n%s", $level, $number, implode("\n", $buf));
-        ;
     }
 
     return implode("\n", $acc);
