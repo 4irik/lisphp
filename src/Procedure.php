@@ -1,36 +1,26 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Che\SimpleLisp;
 
-enum Procedure: string
-{
-    case COND = 'cond';
-    case DEF = 'def';
-    case SET = 'set!';
-    case DO = 'do';
-    case QUOTE = 'quote';
-    case LAMBDA = 'lambda';
-    case MACRO = 'macro';
-    case EVAL = 'eval';
-    case TYPEOF = 'typeof';
+use function Che\SimpleLisp\Eval\map;
+use function Che\SimpleLisp\Eval\_eval;
 
-    case EQUAL = '=';
-    case GT = '>';
-    case LT = '<';
-    case GTOEQ = '>=';
-    case LTOEQ = '<=';
-    case NOT = 'not';
-    case ABS = 'abs';
-    case SUM = '+';
-    case SUB = '-';
-    case MUL = '*';
-    case DIV = '/';
-    case MAX = 'max';
-    case MIN = 'min';
-    case MOD = 'mod';
-    case CONCAT = '++';
-    case PRINT = 'print';
-    case CAR = 'car';
-    case CDR = 'cdr';
-    case CONS = 'cons';
+final readonly class Procedure implements \IteratorAggregate
+{
+    public function __construct(private string $name, private \Closure $closure)
+    {
+    }
+
+    public function __invoke(HashMapInterface $env, ...$args): mixed
+    {
+        $closure = $this->closure;
+        return $closure(...iterator_to_array(map($args, fn ($item) => _eval($item, $env))));
+    }
+
+    #[\Override] public function getIterator(): \Traversable
+    {
+        return new \ArrayIterator([$this->name]);
+    }
 }
