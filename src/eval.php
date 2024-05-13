@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Che\SimpleLisp\Eval;
 
-use Che\SimpleLisp\HashMap;
 use Che\SimpleLisp\HashMapInterface;
+use Che\SimpleLisp\ControlStructureName;
 use Che\SimpleLisp\Procedure;
 use Che\SimpleLisp\Symbol;
+use Che\SimpleLisp\Lambda;
+use Che\SimpleLisp\Macro;
 
 /**
  * @template T
@@ -83,22 +85,28 @@ function _eval(mixed $x, HashMapInterface $env): mixed
             return $x;
         }
 
-        $procedure  = Procedure::tryFrom(is_array($x[0]) ? '' : (string)$x[0]);
+        $procedure  = ControlStructureName::tryFrom(is_array($x[0]) ? '' : (string)$x[0]);
         return match ($procedure) {
-            Procedure::COND => _handleIf($x, $env),
-            Procedure::DEF => _handleDefine($x, $env),
-            Procedure::SET => _handleSet($x, $env),
-            Procedure::DO => _handleDo($x, $env),
-            Procedure::QUOTE => $x[1],
-            Procedure::LAMBDA => _handleLambda($x, $env),
-            Procedure::MACRO => _handleMacro($x, $env),
-            Procedure::EVAL => _eval(_eval($x[1], $env), $env),
-            Procedure::TYPEOF => _typeOf($x[1], $env),
+            ControlStructureName::COND => _handleIf($x, $env),
+            ControlStructureName::DEF => _handleDefine($x, $env),
+            ControlStructureName::SET => _handleSet($x, $env),
+            ControlStructureName::DO => _handleDo($x, $env),
+            ControlStructureName::QUOTE => $x[1],
+            ControlStructureName::LAMBDA => _handleLambda($x, $env),
+            ControlStructureName::MACRO => _handleMacro($x),
+            ControlStructureName::EVAL => _eval(_eval($x[1], $env), $env),
+            ControlStructureName::TYPEOF => _typeOf($x[1]),
+            ControlStructureName::PRINT => _print($x[1]),
             default => _handleProcedure($x, $env),
         };
     }
 
     throw new \Exception('Unknown expression type: $x');
+}
+
+function _print(Symbol|array|int|float|string|bool|Lambda|Macro $x): void
+{
+    throw new \Exception('just do it!');
 }
 
 function _typeOf(Symbol|array|int|float|string|bool|Lambda|Macro $x): string
@@ -184,51 +192,14 @@ function _handleDo(array $x, HashMapInterface $env): mixed
 
 function _handleProcedure(array $x, HashMapInterface $env): mixed
 {
-    $procDef = array_shift($x);
-    $procInstance = _eval($procDef, $env);
-
-    $args = static function (iterable $args) use ($procDef, $env): array {
-        $procName = (string)(is_array($procDef) ? $procDef[0] : '');
-
-        return match (Procedure::tryFrom($procName)) {
-            Procedure::MACRO => $args,
-            default => iterator_to_array(map($args, fn ($item) => _eval($item, $env)))
-        };
-    };
-
-    return is_callable($procInstance)
-        ? $procInstance(...$args($x))
-        : [$procInstance, ...$args($x)];
-}
-
-abstract readonly class Closure implements \IteratorAggregate
-{
-    public function __construct(protected array $list, protected HashMapInterface $env)
-    {
+    $procInstance = _eval(array_shift($x), $env);
+    if(!is_callable($procInstance)) {
+        $procInstance = new Procedure('list_spread', fn (...$x) => [$procInstance, ...$x]);
     }
-
-    #[\Override] public function getIterator(): \Traversable
-    {
-        return new \ArrayIterator($this->list);
+    if($procInstance instanceof Lambda) {
+        $procInstance = fn (HashMapInterface $_, ...$x): mixed => $procInstance(...$x);
     }
-}
-
-final readonly class Lambda extends Closure
-{
-    public function __invoke(...$args): mixed
-    {
-        $localEnv = new HashMap($this->env);
-
-        $argsVar = $this->list[1];
-        foreach ($argsVar as $key => $argVarItem) {
-            $localEnv->put(
-                $argVarItem instanceof Symbol ? $argVarItem : new Symbol((string)_eval($argVarItem, $this->env)),
-                _eval($args[$key], $this->env)
-            );
-        }
-
-        return _eval($this->list[2], $localEnv);
-    }
+    return $procInstance($env, ...$x);
 }
 
 function _handleLambda(array $x, HashMapInterface $env): Lambda
@@ -236,26 +207,7 @@ function _handleLambda(array $x, HashMapInterface $env): Lambda
     return new Lambda($x, $env);
 }
 
-final readonly class Macro extends Closure
+function _handleMacro(array $x): Macro
 {
-    public function __invoke(...$args)
-    {
-        $argsVar = $this->list[1];
-        $body = $this->list[2];
-        foreach ($argsVar as $argVarKey => $argVarName) {
-            $paramValueItem = $args[$argVarKey];
-            array_walk_recursive($body, static function (&$bodyItem) use ($argVarName, $paramValueItem): void {
-                if($bodyItem instanceof Symbol && $bodyItem == $argVarName) {
-                    $bodyItem = $paramValueItem;
-                }
-            });
-        }
-
-        return _eval($body, $this->env);
-    }
-}
-
-function _handleMacro(array $x, HashMapInterface $env): Macro
-{
-    return new Macro($x, $env);
+    return new Macro($x);
 }
