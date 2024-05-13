@@ -16,7 +16,7 @@ class EnvTest extends TestCase
     public function testSuccess(string $op, string|int|float|bool $expected, ...$args): void
     {
         $env = _defaultEnv();
-        self::assertEquals($expected, $env->get(new Symbol($op))(...$args));
+        self::assertEquals($expected, $env->get(new Symbol($op))($env, ...$args));
     }
 
     public static function envDP(): iterable
