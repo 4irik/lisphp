@@ -1,6 +1,8 @@
 SHELL = /bin/bash
 DC_RUN_ARGS = --rm --user "$(shell id -u):$(shell id -g)"
 
+.PHONY: repl
+
 help: ## Show this help
 	@printf "\033[33m%s:\033[0m\n" 'Available commands'
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_-]+:.*?## / {printf "  \033[32m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -13,6 +15,9 @@ install: ## Install dependencies
 
 shell: ## App container shell
 	docker compose run $(DC_RUN_ARGS) app sh
+
+repl: ## Run REPL in app container
+	docker compose run $(DC_RUN_ARGS) app ./repl
 
 test: ## Run tests
 	docker compose run $(DC_RUN_ARGS) app composer test
