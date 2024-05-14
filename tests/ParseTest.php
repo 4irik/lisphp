@@ -104,10 +104,24 @@ EON;
         yield [['(', 'def', 'a', '" "', ')'], '(def a " ")'];
         yield [['(', 'def', 'a', "\"\n \"", ')'], "(def a \"\n \")"];
         yield [['(', 'def', 'a', '""', ')'], '(def a "")'];
-        yield [['(', 'def', 'a1_b2', '2', ')'], '(def a1-b2 2)'];
+        yield [['(', 'def', 'a1-b2', '2', ')'], '(def a1-b2 2)'];
         yield [['(', '-', '1', '2', ')'], '(- 1 2)'];
         yield [['(', 'set!', 'a', '2', ')'], '(set! a 2)'];
         yield [['(', 'def', 'a', '"(a)*b"', ')'], '(def a "(a)*b")'];
+        yield [['nil?'], 'nil?'];
+        yield [['nil!'], 'nil!'];
+        yield [['/n'], '/n'];
+        yield [['\n'], '\n'];
+        yield [['\='], '\='];
+        yield [['/='], '/='];
+        yield [['!='], '!='];
+        yield [['?='], '?='];
+        yield [['test-1'], 'test-1'];
+        yield [['test_1'], 'test_1'];
+
+        $newLine = "
+";
+        yield [['(', 'def', 'n', "\"\n\"", ')'], '(def n "'.$newLine.'")'];
     }
 
     public static function atomDP(): iterable

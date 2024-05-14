@@ -19,23 +19,24 @@ function tokenize(string $program): iterable
 {
     // bad hack :(
     $program = str_replace('(-', '||||', $program);
-    $program = str_replace('-', '_', $program);
+    $program = str_replace('-', '____', $program);
     $program = str_replace('||||', '(-', $program);
+    $program = str_replace('____', '-', $program);
 
     // удаляем комментарии
     $program = preg_replace('/^;.*/m', '', $program);
 
-    preg_match_all('/\(|\)|\w+\!?|\"[^"]*\"|[\'=><!*\/+-]+/m', $program, $m, PREG_UNMATCHED_AS_NULL);
+    preg_match_all('/\(|\)|[-\/\\\_!?\w+]{2,}|\w+|\"[^"]*\"|[-\'=><?!*\/+\\\]+/m', $program, $m, PREG_UNMATCHED_AS_NULL);
 
     return array_values(
         array_filter(
             array_map(
                 fn (string $item): string => trim($item),
                 $m[0]
-                //                                explode(
-                //                                    ' ',
-                //                                    str_replace(['(', ')', '\''], [' ( ', ' ) ', ' \' '], $program)
-                //                                )
+                //                explode(
+                //                    ' ',
+                //                    str_replace(['(', ')', '\''], [' ( ', ' ) ', ' \' '], $program)
+                //                )
             ),
             fn ($val) => match ($val) {
                 '0' => true,
