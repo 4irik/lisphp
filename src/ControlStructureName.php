@@ -16,4 +16,6 @@ enum ControlStructureName: string
     case EVAL = 'eval';
     case TYPEOF = 'typeof';
     case PRINT = 'print';
+    case SYMBOL = 'symbol'; // todo: realize
+    case EVAL_IN = 'eval-in'; // todo: realize
 }
