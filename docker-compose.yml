@@ -16,6 +16,3 @@ services:
       - /etc/group:/etc/group:ro
       - tmp-data:/tmp:rw
       - .:/app:rw
-    ports:
-      - 8888:8080/tcp
-
