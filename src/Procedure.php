@@ -21,6 +21,6 @@ final readonly class Procedure implements \IteratorAggregate
 
     #[\Override] public function getIterator(): \Traversable
     {
-        return new \ArrayIterator([$this->name]);
+        return new \ArrayIterator([new Symbol($this->name)]);
     }
 }

@@ -31,6 +31,6 @@ final readonly class Lambda implements \IteratorAggregate
 
     #[\Override] public function getIterator(): \Traversable
     {
-        return new \ArrayIterator([ControlStructureName::LAMBDA->value, $this->args, $this->body]);
+        return new \ArrayIterator([new Symbol(ControlStructureName::LAMBDA->value), $this->args, $this->body]);
     }
 }

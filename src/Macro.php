@@ -52,6 +52,6 @@ final readonly class Macro implements \IteratorAggregate
 
     #[\Override] public function getIterator(): \Traversable
     {
-        return new \ArrayIterator([ControlStructureName::MACRO->value, $this->args, $this->body]);
+        return new \ArrayIterator([new Symbol(ControlStructureName::MACRO->value), $this->args, $this->body]);
     }
 }
