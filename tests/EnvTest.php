@@ -13,7 +13,7 @@ use function Che\SimpleLisp\Env\_defaultEnv;
 class EnvTest extends TestCase
 {
     #[DataProvider('envDP')]
-    public function testSuccess(string $op, string|int|float|bool $expected, ...$args): void
+    public function testSuccess(string $op, Symbol|array|string|int|float|bool $expected, ...$args): void
     {
         $env = _defaultEnv();
         self::assertEquals($expected, $env->get(new Symbol($op))($env, ...$args));
@@ -177,6 +177,30 @@ class EnvTest extends TestCase
             'mod',
             3,
             13, 5
+        ];
+
+        yield 'concat' => [
+            '++',
+            "12",
+            1, 2
+        ];
+
+        yield 'car' => [
+            'car',
+            1,
+            [1,2,3]
+        ];
+
+        yield 'cdr' => [
+            'cdr',
+            [2, 3],
+            [1, 2, 3]
+        ];
+
+        yield 'cons' => [
+            'cons',
+            [1, 2, 3],
+            1, 2, 3
         ];
     }
 }
