@@ -192,8 +192,6 @@ function _handleProcedure(array $x, HashMapInterface $env): mixed
     if(!is_callable($procInstance)) {
         $procInstance = new Procedure('list_spread', fn (...$x) => [$procInstance, ...$x]);
     }
-    if($procInstance instanceof Lambda) {
-        $procInstance = fn (HashMapInterface $_, ...$x): mixed => $procInstance(...$x);
-    }
+
     return $procInstance($env, ...$x);
 }

@@ -13,7 +13,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 use function Che\SimpleLisp\Eval\_eval;
-use function Che\SimpleLisp\Eval\_handleLambda;
 use function Che\SimpleLisp\Eval\_typeOf;
 use function Che\SimpleLisp\Eval\envForSymbol;
 use function Che\SimpleLisp\Eval\map;
@@ -317,6 +316,7 @@ class EvalTest extends TestCase
     public function testLambdaLocalEnv(): void
     {
         $env = new HashMap();
+        $env->put(new Symbol($concat = '++'), new Procedure($concat, fn (...$x) => reduce($x, fn ($a, $b) => $a . $b)));
 
         _eval([
             [
@@ -332,8 +332,45 @@ class EvalTest extends TestCase
         ], $env);
 
         assertFalse($env->has(new Symbol('x')));
+        assertEquals(1, $env->childList()->count());
         $lambdaEnv = $env->childList()->getIterator()->current();
         assertEquals(10, $lambdaEnv->get(new Symbol('x')));
+
+        _eval([
+            new Symbol('def'),
+            new Symbol('var_1'),
+            "test_1",
+            new Symbol('val_1'),
+            15,
+        ], $env);
+        _eval([
+            [
+                new Symbol('lambda'),
+                [
+                    new Symbol('x'),
+                    new Symbol('y'),
+                ],
+                [
+                    new Symbol('def'),
+                    [
+                        new Symbol('++'),
+                        new Symbol('x'),
+                        ""
+                    ],
+                    new Symbol('y'),
+                ]
+            ],
+            new Symbol('var_1'),
+            new Symbol('val_1'),
+        ], $env);
+
+        assertFalse($env->has(new Symbol('test_1')));
+        assertEquals(2, $env->childList()->count());
+        $iter = $env->childList()->getIterator();
+        $iter->next();
+        $lambdaEnv = $iter->current();
+        assertTrue($lambdaEnv->has(new Symbol('test_1')));
+        assertEquals(15, $lambdaEnv->get(new Symbol('test_1')));
     }
 
     public function testLambdaOOP(): void
@@ -430,11 +467,53 @@ class EvalTest extends TestCase
         ], $env));
     }
 
+    public function testLambdaRecursion(): void
+    {
+        $env = new HashMap();
+        $env->put(new Symbol($sub = '-'), new Procedure($sub, fn (int $a, int $b): int => $a - $b));
+        $env->put(new Symbol($mul = '*'), new Procedure($mul, fn (int $a, int $b): int => $a * $b));
+        $env->put(new Symbol($eq = '='), new Procedure($eq, fn ($a, $b) => $a == $b));
+
+        _eval([
+            new Symbol('def'),
+            new Symbol('fac'),
+            [
+                new Symbol('lambda'),
+                [
+                    new Symbol('n'),
+                ],
+                [
+                    new Symbol('cond'),
+                    [
+                        new Symbol('='),
+                        new Symbol('n'),
+                        1
+                    ],
+                    1,
+                    [
+                        new Symbol('*'),
+                        new Symbol('n'),
+                        [
+                            new Symbol('fac'),
+                            [
+                                new Symbol('-'),
+                                new Symbol('n'),
+                                1
+                            ]
+                        ]
+                    ]
+                ],
+            ],
+        ], $env);
+
+        assertEquals(2, _eval([new Symbol('fac'), 2], $env));
+    }
+
     public function testMacroEval(): void
     {
         $env = new HashMap();
         $env->put(new Symbol($sum = '+'), new Procedure($sum, fn (...$x) => reduce($x, fn ($a, $b) => $a + $b)));
-        $env->put(new Symbol('l1'), _handleLambda(['', [], 10], $env));
+        $env->put(new Symbol('l1'), new Lambda(['', [], 10], $env));
 
         _eval([
             new Symbol('def'),

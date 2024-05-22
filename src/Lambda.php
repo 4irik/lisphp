@@ -15,14 +15,14 @@ final readonly class Lambda implements \IteratorAggregate
         $this->initParams($list);
     }
 
-    public function __invoke(...$args): mixed
+    public function __invoke(HashMapInterface $env, ...$args): mixed
     {
         $localEnv = new HashMap($this->env);
 
         foreach ($this->args as $key => $argVarItem) {
             $localEnv->put(
-                $argVarItem instanceof Symbol ? $argVarItem : new Symbol((string)_eval($argVarItem, $this->env)),
-                _eval($args[$key], $this->env)
+                $argVarItem instanceof Symbol ? $argVarItem : new Symbol((string)_eval($argVarItem, $env)),
+                _eval($args[$key], $env)
             );
         }
 
