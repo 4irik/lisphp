@@ -67,7 +67,7 @@ function envForSymbol(Symbol $s, HashMapInterface $env): HashMapInterface
     return $isDetected ? $env : $startEnv;
 }
 
-function _eval(mixed $x, HashMapInterface $env): mixed
+function _eval(Symbol|array|string|int|float|bool $x, HashMapInterface $env): mixed
 {
     if(is_scalar($x)) {
         return $x;
@@ -80,28 +80,24 @@ function _eval(mixed $x, HashMapInterface $env): mixed
             : $x;
     }
 
-    if(is_array($x)) {
-        if(!$x) {
-            return $x;
-        }
-
-        $procedure  = ControlStructureName::tryFrom(is_array($x[0]) ? '' : (string)$x[0]);
-        return match ($procedure) {
-            ControlStructureName::COND => _handleIf($x, $env),
-            ControlStructureName::DEF => _handleDefine($x, $env),
-            ControlStructureName::SET => _handleSet($x, $env),
-            ControlStructureName::DO => _handleDo($x, $env),
-            ControlStructureName::QUOTE => $x[1],
-            ControlStructureName::LAMBDA => _handleLambda($x, $env),
-            ControlStructureName::MACRO => _handleMacro($x),
-            ControlStructureName::EVAL => _eval(_eval($x[1], $env), $env),
-            ControlStructureName::TYPEOF => _typeOf($x[1]),
-            ControlStructureName::PRINT => _print($x[1]),
-            default => _handleProcedure($x, $env),
-        };
+    if(!$x) {
+        return $x;
     }
 
-    throw new \Exception('Unknown expression type: $x');
+    $procedure  = ControlStructureName::tryFrom(is_array($x[0]) ? '' : (string)$x[0]);
+    return match ($procedure) {
+        ControlStructureName::COND => _handleIf($x, $env),
+        ControlStructureName::DEF => _handleDefine($x, $env),
+        ControlStructureName::SET => _handleSet($x, $env),
+        ControlStructureName::DO => _handleDo($x, $env),
+        ControlStructureName::QUOTE => $x[1],
+        ControlStructureName::LAMBDA => new Lambda($x, $env),
+        ControlStructureName::MACRO => new Macro($x),
+        ControlStructureName::EVAL => _eval(_eval($x[1], $env), $env),
+        ControlStructureName::TYPEOF => _typeOf(_eval($x[1], $env)),
+        ControlStructureName::PRINT => _print($x[1]),
+        default => _handleProcedure($x, $env),
+    };
 }
 
 function _print(Symbol|array|int|float|string|bool|Lambda|Macro $x): void
@@ -200,14 +196,4 @@ function _handleProcedure(array $x, HashMapInterface $env): mixed
         $procInstance = fn (HashMapInterface $_, ...$x): mixed => $procInstance(...$x);
     }
     return $procInstance($env, ...$x);
-}
-
-function _handleLambda(array $x, HashMapInterface $env): Lambda
-{
-    return new Lambda($x, $env);
-}
-
-function _handleMacro(array $x): Macro
-{
-    return new Macro($x);
 }
