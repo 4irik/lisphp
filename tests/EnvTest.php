@@ -199,8 +199,27 @@ class EnvTest extends TestCase
 
         yield 'cons' => [
             'cons',
-            [1, 2, 3],
-            1, 2, 3
+            [1, 2],
+            1, 2
         ];
+
+        yield 'cons with empty list' => [
+            'cons',
+            [1],
+            1, []
+        ];
+
+        yield 'cons non empty list at head' => [
+            'cons',
+            [[1, 2], 3],
+            [1, 2], 3
+        ];
+
+        yield 'cons non empty list at tail' => [
+            'cons',
+            [1, 2, 3],
+            1, [2, 3]
+        ];
+
     }
 }
