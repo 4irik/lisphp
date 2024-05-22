@@ -17,6 +17,7 @@ use function Che\SimpleLisp\Parse\tokenize;
 require_once './vendor/autoload.php';
 
 const HISTORY_FILE_PATH = '.repl_history';
+const STD_LIB = 'std_lib.lisp';
 
 enum OutputMode: string
 {
@@ -72,6 +73,9 @@ $env = new class (_defaultEnv()) extends HashMap {
         return parent::getIterator();
     }
 };
+
+$std_lib = file_get_contents(implode(DIRECTORY_SEPARATOR, ['.', 'src', STD_LIB]));
+__eval($std_lib, $env);
 
 if(file_exists(HISTORY_FILE_PATH)) {
     readline_read_history(HISTORY_FILE_PATH);
