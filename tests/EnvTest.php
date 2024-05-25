@@ -221,5 +221,10 @@ class EnvTest extends TestCase
             1, [2, 3]
         ];
 
+        yield 'interop strlen' => [
+            'php',
+            3,
+            "strlen", "abc"
+        ];
     }
 }

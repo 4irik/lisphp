@@ -37,6 +37,7 @@ function _defaultEnv(): HashMapInterface
     $add('car', fn (array $x): Symbol|string|int|float|bool => current($x));
     $add('cdr', fn (array $x): array => array_slice($x, 1));
     $add('cons', fn ($a, $b): array => array_merge([$a], (array)$b));
+    $add('php', fn (string $fn, ...$args): mixed => $fn(...)(...$args));
 
     return $storage;
 }
