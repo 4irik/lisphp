@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Test;
 
+use Che\SimpleLisp\HashMapInterface;
 use Che\SimpleLisp\Lambda;
 use Che\SimpleLisp\Macro;
 use Che\SimpleLisp\HashMap;
@@ -371,6 +372,59 @@ class EvalTest extends TestCase
         $lambdaEnv = $iter->current();
         assertTrue($lambdaEnv->has(new Symbol('test_1')));
         assertEquals(15, $lambdaEnv->get(new Symbol('test_1')));
+    }
+
+    public function testLambdaCatchDeclarationEnv(): void
+    {
+        $env = new HashMap();
+        $env->put(new Symbol($sum = '+'), new Procedure($sum, fn (...$x) => reduce($x, fn ($a, $b) => $a + $b)));
+
+        _eval([
+            new Symbol('def'),
+            new Symbol('a'),
+            10,
+            new Symbol('l1'),
+            [
+                new Symbol('lambda'),
+                [
+                    new Symbol('x')
+                ],
+                [
+                    new Symbol('+'),
+                    new Symbol('x'),
+                    new Symbol('a')
+                ]
+            ]
+        ], $env);
+
+        assertEquals(15, _eval([new Symbol('l1'), 5], $env));
+
+        _eval([
+            new Symbol('def'),
+            new Symbol('l2'),
+            [
+                new Symbol('lambda'),
+                [
+                    new Symbol('x'),
+                    new Symbol('b'),
+                ],
+                [
+                    new Symbol('do'),
+                    [
+                        new Symbol('def'),
+                        new Symbol('a'),
+                        new Symbol('x')
+                    ],
+                    [
+                        new Symbol('l1'),
+                        new Symbol('b'),
+                    ]
+                ]
+            ]
+        ], $env);
+
+
+        assertEquals(15, _eval([new Symbol('l2'), 15, 5], $env));
     }
 
     public function testLambdaOOP(): void
