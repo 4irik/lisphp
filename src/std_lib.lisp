@@ -53,7 +53,12 @@
 
 (defn length (list) (fold-left (lambda (a e) (+ 1 a)) 0 list))
 
-(defn zip-with (f a b) cond (nil? a) nil (nil? b) nil (cons (f (car a) (car b)) (zip-with f (cdr a) (cdr b))))
+(defn zip-with (f a b)
+    (cond (nil? a)
+        nil
+        (cond (nil? b)
+            nil
+            (cons (f (car a) (car b)) (zip-with f (cdr a) (cdr b))))))
 
 
 
@@ -173,3 +178,5 @@
 (defn chunks-of (n l) (__chunks-of__ n l n))
 
 (defn nub (l) (cond (nil? l) nil (cons (car l) (nub (filter (lambda (x) (/= x (car l))) (cdr l))))))
+
+;(random
