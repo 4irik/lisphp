@@ -39,7 +39,7 @@ function _defaultEnv(): HashMapInterface
     $add('cons', fn ($a, $b): array => array_merge([$a], (array)$b));
     $add('class', fn (string $className): string => match(class_exists($className)) {
         true => $className,
-        false => throw new \Exception(sprintf('class name "" not found', $className)),
+        false => throw new \Exception(sprintf('class name "%s" not found', $className)),
     });
     $add('php', static function (string|object $fn, ...$args): mixed {
         if(is_string($fn) && function_exists($fn)) {
