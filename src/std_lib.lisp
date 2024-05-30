@@ -17,6 +17,8 @@
 (def \n "
 ")
 
+(defmacro caar (l) (car (car l)))
+(defmacro cdar (l) (cdr (car l)))
 
 (def __and__ (lambda (args) (cond (= args '()) true (cond (= (cdr args) '()) (car args) (cons (cond (car args) (__and__ (cdr args)) false))))))
 (def and (macro (args) (eval (__and__ 'args))))
