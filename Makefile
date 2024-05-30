@@ -19,8 +19,11 @@ shell: ## App container shell
 repl: ## Run REPL in app container
 	docker compose run $(DC_RUN_ARGS) app ./repl
 
-test: ## Run tests
+test: ## Run all tests
 	docker compose run $(DC_RUN_ARGS) app composer test
+
+test-current: ## Run tests for current functionality
+	docker compose run $(DC_RUN_ARGS) app composer test-current
 
 type-check: ## Run phpstan
 	docker compose run $(DC_RUN_ARGS) app composer type-check
