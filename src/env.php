@@ -34,7 +34,7 @@ function _defaultEnv(): HashMapInterface
     $add('min', fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => min($a, $b)));
     $add('mod', fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => $a % $b));
     $add('++', fn (...$x): string => reduce($x, fn ($a, $b): string => $a . $b));
-    $add('car', fn (array $x): Symbol|string|int|float|bool => current($x));
+    $add('car', fn (array $x): Symbol|array|string|int|float|bool => current($x));
     $add('cdr', fn (array $x): array => array_slice($x, 1));
     $add('cons', fn ($a, $b): array => array_merge([$a], (array)$b));
     $add('class', fn (string $className): string => match(class_exists($className)) {
