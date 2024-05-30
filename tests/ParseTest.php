@@ -39,6 +39,11 @@ EON;
         self::assertEquals(['(', '+', '1', '0', ')'], tokenize('(+ 1 0)'));
     }
 
+    public function testTokenizeFloatingPoint(): void
+    {
+        assertEquals(['(', '+', '1', '1.1', ')'], tokenize('(+ 1 1.1)'));
+    }
+
     #[DataProvider('atomDP')]
     public function testAtom(string $token, mixed $expected): void
     {

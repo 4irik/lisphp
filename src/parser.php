@@ -26,7 +26,7 @@ function tokenize(string $program): iterable
     // удаляем комментарии
     $program = preg_replace('/^;.*/m', '', $program);
 
-    preg_match_all('/\(|\)|[-\/\\\_!?\w+]{2,}|\w+|\"[^"]*\"|[-\'=><?!*\/+\\\]+/m', $program, $m, PREG_UNMATCHED_AS_NULL);
+    preg_match_all('/\(|\)|[-\/\\\_!?\.\w+]{2,}|\w+|\"[^"]*\"|[-\'=><?!*\/+\\\]+/m', $program, $m, PREG_UNMATCHED_AS_NULL);
 
     return array_values(
         array_filter(
