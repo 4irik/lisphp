@@ -99,9 +99,27 @@ function _eval(object|array|string|int|float|bool $x, HashMapInterface $env): mi
         ControlStructureName::MACRO => new Macro($x),
         ControlStructureName::EVAL => _eval(_eval($x[1], $env), $env),
         ControlStructureName::TYPEOF => _typeOf(_eval($x[1], $env)),
-        ControlStructureName::PRINT => _print($x[1]),
+        ControlStructureName::PRINT => _print($x[1], $env),
+        ControlStructureName::READ => _handleRead(),
         default => _handleProcedure($x, $env),
     };
+}
+
+function _print(object|array|int|float|string|bool $x, HashMapInterface $env): void
+{
+    $value = _eval($x, $env);
+    $printableValue = match (true) {
+        is_scalar($value) => $value,
+        is_object($value) && $value instanceof \Stringable => (string) $value,
+        default => throw new \Exception(sprintf('class "%s" could not be convert to string', get_class($value)))
+    };
+
+    file_put_contents('php://stdout', $printableValue);
+}
+
+function _handleRead(): string
+{
+    return readline();
 }
 
 function _typeOf(object|array|int|float|string|bool $x): string
