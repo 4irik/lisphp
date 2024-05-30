@@ -37,7 +37,31 @@ function _defaultEnv(): HashMapInterface
     $add('car', fn (array $x): Symbol|string|int|float|bool => current($x));
     $add('cdr', fn (array $x): array => array_slice($x, 1));
     $add('cons', fn ($a, $b): array => array_merge([$a], (array)$b));
-    $add('php', fn (string $fn, ...$args): mixed => $fn(...)(...$args));
+    $add('class', fn (string $className): string => match(class_exists($className)) {
+        true => $className,
+        false => throw new \Exception(sprintf('class name "" not found', $className)),
+    });
+    $add('php', static function (string|object $fn, ...$args): mixed {
+        if(is_string($fn) && function_exists($fn)) {
+            return $fn(...$args);
+        }
+
+        $method = array_shift($args);
+        if($method === 'new') {
+            $fn = new readonly class ($fn) {
+                public function __construct(private string $className)
+                {
+                }
+
+                public function new(...$args): object
+                {
+                    return new $this->className(...$args);
+                }
+            };
+        }
+
+        return [$fn, $method](...$args);
+    });
 
     return $storage;
 }

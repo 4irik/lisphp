@@ -67,7 +67,7 @@ function envForSymbol(Symbol $s, HashMapInterface $env): HashMapInterface
     return $isDetected ? $env : $startEnv;
 }
 
-function _eval(Symbol|array|string|int|float|bool $x, HashMapInterface $env): mixed
+function _eval(object|array|string|int|float|bool $x, HashMapInterface $env): mixed
 {
     if(is_scalar($x)) {
         return $x;
@@ -78,6 +78,10 @@ function _eval(Symbol|array|string|int|float|bool $x, HashMapInterface $env): mi
         return $symbolEnv->has($x)
             ? $symbolEnv->get($x)
             : $x;
+    }
+
+    if(is_object($x)) {
+        return $x;
     }
 
     if(!$x) {
@@ -100,12 +104,7 @@ function _eval(Symbol|array|string|int|float|bool $x, HashMapInterface $env): mi
     };
 }
 
-function _print(Symbol|array|int|float|string|bool|Lambda|Macro $x): void
-{
-    throw new \Exception('just do it!');
-}
-
-function _typeOf(Symbol|array|int|float|string|bool|Lambda|Macro $x): string
+function _typeOf(object|array|int|float|string|bool $x): string
 {
     return match (true) {
         is_int($x) => 'int',
@@ -116,6 +115,7 @@ function _typeOf(Symbol|array|int|float|string|bool|Lambda|Macro $x): string
         $x instanceof Symbol => 'Symbol',
         $x instanceof Lambda => 'Lambda',
         $x instanceof Macro => 'Macro',
+        is_object($x) => get_class($x),
         default => throw new \Exception('Undefined type of $x')
     };
 }

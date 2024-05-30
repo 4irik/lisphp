@@ -6,7 +6,6 @@ error_reporting(E_ALL);
 
 use Che\SimpleLisp\HashMap;
 use Che\SimpleLisp\HashMapInterface;
-
 use Che\SimpleLisp\Symbol;
 
 use function Che\SimpleLisp\Env\_defaultEnv;
@@ -202,6 +201,11 @@ function toString(mixed $value): string
     if(is_string($value)) {
         $value = sprintf('"%s"', $value);
     }
+
+    if(is_object($value) && (!str_starts_with(get_class($value), 'Che\SimpleLisp'))) {
+        $value = sprintf('class %s: %s', get_class($value), substr(serialize($value), 0, 100));
+    }
+
     return str_replace(["\r", "\n", "\t"], ['\r', '\n', '\t'], (string)$value);
 }
 

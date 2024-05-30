@@ -6,17 +6,86 @@ namespace Test;
 
 use Che\SimpleLisp\Symbol;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
 use function Che\SimpleLisp\Env\_defaultEnv;
+use function PHPUnit\Framework\assertEquals;
 
 class EnvTest extends TestCase
 {
     #[DataProvider('envDP')]
-    public function testSuccess(string $op, Symbol|array|string|int|float|bool $expected, ...$args): void
+    public function testSuccess(string $op, mixed $expected, ...$args): void
     {
         $env = _defaultEnv();
         self::assertEquals($expected, $env->get(new Symbol($op))($env, ...$args));
+    }
+
+    public function testInteropFunctions(): void
+    {
+        $env = _defaultEnv();
+        self::assertEquals('9eb471eb', $env->get(new Symbol('php'))($env, 'hash', 'murmur3a', '123'));
+    }
+
+    #[Group('ignore')]
+    public function testInteropNamedArgs(): void
+    {
+        // todo: именованные аргументы
+
+        $env = _defaultEnv();
+        self::assertEquals('9832d40f', $env->get(new Symbol('php'))($env, 'hash', 'murmur3a', '123', ['options', ['seed', 42]]));
+    }
+
+    public function testInteropCreateNewObject(): void
+    {
+        $env = _defaultEnv();
+        self::assertInstanceOf(\DateTime::class, $env->get(new Symbol('php'))($env, [new Symbol('class'), '\DateTime'], 'new'));
+    }
+
+    public function testInteropCreateNewObjectWithArguments(): void
+    {
+        $env = _defaultEnv();
+        $date = '22.01.2022 00:00:00';
+        self::assertEquals(new \DateTime($date), $env->get(new Symbol('php'))($env, [new Symbol('class'), '\DateTime'], 'new', $date));
+    }
+
+    public function testInteropCallMethod(): void
+    {
+        $env = _defaultEnv();
+        $format = 'd.m.Y H:i:s';
+        self::assertEquals(
+            \DateTime::createFromFormat($format, '23.01.2022 00:00:00'),
+            $env->get(new Symbol('php'))($env, \DateTime::createFromFormat($format, '22.01.2022 00:00:00'), 'modify', '+1 day')
+        );
+    }
+
+    public function testInteropCallStaticMethod(): void
+    {
+        $env = _defaultEnv();
+        $format = 'd.m.Y H:i:s';
+        $date = '22.01.2022 00:00:00';
+        self::assertEquals(
+            \DateTime::createFromFormat($format, $date),
+            $env->get(new Symbol('php'))($env, [new Symbol('class'), '\DateTime'], 'createFromFormat', $format, $date)
+        );
+    }
+
+    #[Group('ignore')]
+    public function testInteropCallableObject(): void
+    {
+        // todo: вызов объекта как функции
+        $obj = new class () {
+            public function __invoke(int $i): int
+            {
+                return $i + 10;
+            }
+        };
+
+        $env = _defaultEnv();
+        assertEquals(
+            15,
+            $env->get(new Symbol('php'))($env, $obj, 5)
+        );
     }
 
     public static function envDP(): iterable
@@ -219,12 +288,6 @@ class EnvTest extends TestCase
             'cons',
             [1, 2, 3],
             1, [2, 3]
-        ];
-
-        yield 'interop strlen' => [
-            'php',
-            3,
-            "strlen", "abc"
         ];
     }
 }
