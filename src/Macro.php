@@ -37,8 +37,17 @@ final readonly class Macro implements \IteratorAggregate
                 return $this->map[(string) $symbol] ?? null;
             }
         };
+
+        $countExpectedArgs = count($this->args);
+        $countReceivedArgs = count($args);
         foreach ($this->args as $argKey => $argName) {
-            $argsMap->put($argName, $args[$argKey]);
+            if($countExpectedArgs < $countReceivedArgs && ($argKey + 1) === $countExpectedArgs) {
+                $argsValue = $args;
+            } else {
+                $argsValue = array_shift($args);
+            }
+
+            $argsMap->put($argName, $argsValue);
         }
 
         array_walk_recursive($body, static function (&$bodyItem) use ($argsMap): void {

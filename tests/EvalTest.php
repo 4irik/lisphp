@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Test;
 
-use Che\SimpleLisp\HashMapInterface;
 use Che\SimpleLisp\Lambda;
 use Che\SimpleLisp\Macro;
 use Che\SimpleLisp\HashMap;
@@ -563,6 +562,39 @@ class EvalTest extends TestCase
         assertEquals(2, _eval([new Symbol('fac'), 2], $env));
     }
 
+    public function testLambdaParameterGreaterThenArguments(): void
+    {
+        $env = new HashMap();
+        $env->put(new Symbol($sum = '+'), new Procedure($sum, static fn (int $a, int $b): int => $a + $b));
+        $env->put(new Symbol($car = 'car'), new Procedure($car, static fn (array $x): Symbol|array|string|int|float|bool => current($x)));
+        $env->put(new Symbol($cdr = 'cdr'), new Procedure($cdr, static fn (array $x): array => array_slice($x, 1)));
+
+        _eval([
+            new Symbol('def'),
+            new Symbol('test'),
+            [
+                new Symbol('lambda'),
+                [
+                    new Symbol('x'),
+                    new Symbol('y'),
+                ],
+                [
+                    new Symbol('+'),
+                    new Symbol('x'),
+                    [
+                        new Symbol('car'),
+                        [
+                            new Symbol('cdr'),
+                            new Symbol('y'),
+                        ]
+                    ],
+                ],
+            ],
+        ], $env);
+
+        assertEquals(4, _eval([new Symbol('test'), 1, 2, 3], $env));
+    }
+
     public function testMacroEval(): void
     {
         $env = new HashMap();
@@ -732,5 +764,36 @@ class EvalTest extends TestCase
             ]),
             $env->get(new Symbol('defn'))
         );
+    }
+
+    public function testMacroParameterGreaterThenArguments(): void
+    {
+        $env = new HashMap();
+        $env->put(new Symbol($cons = 'cons'), new Procedure($cons, static fn ($a, $b): array => array_merge([$a], (array)$b)));
+        $env->put(new Symbol($eq = '='), new Procedure($eq, static fn ($a, $b) => $a == $b));
+
+        _eval([
+            new Symbol('def'),
+            new Symbol('test'),
+            [
+                new Symbol('macro'),
+                [
+                    new Symbol('x'),
+                    new Symbol('y'),
+                    new Symbol('z'),
+                ],
+                [
+                    new Symbol('='),
+                    [
+                        new Symbol('cons'),
+                        new Symbol('x'),
+                        new Symbol('y')
+                    ],
+                    new Symbol('z')
+                ],
+            ]
+        ], $env);
+
+        assertTrue(_eval([new Symbol('test'), 1, 2, 1, 2], $env));
     }
 }

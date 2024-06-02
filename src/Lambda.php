@@ -19,10 +19,19 @@ final readonly class Lambda implements \IteratorAggregate
     {
         $localEnv = new HashMap($this->env);
 
+        $countExpectedArgs = count($this->args);
+        $countReceivedArgs = count($args);
+
         foreach ($this->args as $key => $argVarItem) {
+            if($countExpectedArgs < $countReceivedArgs && ($key + 1) === $countExpectedArgs) {
+                $argsValue = $args;
+            } else {
+                $argsValue = array_shift($args);
+            }
+
             $localEnv->put(
                 $argVarItem instanceof Symbol ? $argVarItem : new Symbol((string)_eval($argVarItem, $env)),
-                _eval($args[$key], $env)
+                _eval($argsValue, $env)
             );
         }
 
