@@ -19,25 +19,25 @@ function _defaultEnv(): HashMapInterface
         $storage->put(new Symbol($name), new Procedure($name, $closure));
     };
 
-    $add('=', fn ($a, $b): bool => $a === $b);
-    $add('>', fn ($a, $b): bool => $a > $b);
-    $add('<', fn ($a, $b): bool => $a < $b);
-    $add('>=', fn ($a, $b): bool => $a >= $b);
-    $add('<=', fn ($a, $b): bool => $a <= $b);
-    $add('not', fn (bool $x): bool => !$x);
-    $add('abs', fn ($x): int|float => abs($x));
-    $add('+', fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => $a + $b));
-    $add('-', fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => $a - $b));
-    $add('*', fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => $a * $b));
-    $add('/', fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => $a / $b));
-    $add('max', fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => max($a, $b)));
-    $add('min', fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => min($a, $b)));
-    $add('mod', fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => $a % $b));
-    $add('++', fn (...$x): string => reduce($x, fn ($a, $b): string => $a . $b));
-    $add('car', fn (array $x): Symbol|array|string|int|float|bool => current($x));
-    $add('cdr', fn (array $x): array => array_slice($x, 1));
-    $add('cons', fn ($a, $b): array => array_merge([$a], (array)$b));
-    $add('class', fn (string $className): string => match(class_exists($className)) {
+    $add('=', static fn ($a, $b): bool => $a == $b);
+    $add('>', static fn ($a, $b): bool => $a > $b);
+    $add('<', static fn ($a, $b): bool => $a < $b);
+    $add('>=', static fn ($a, $b): bool => $a >= $b);
+    $add('<=', static fn ($a, $b): bool => $a <= $b);
+    $add('not', static fn (bool $x): bool => !$x);
+    $add('abs', static fn ($x): int|float => abs($x));
+    $add('+', static fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => $a + $b));
+    $add('-', static fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => $a - $b));
+    $add('*', static fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => $a * $b));
+    $add('/', static fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => $a / $b));
+    $add('max', static fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => max($a, $b)));
+    $add('min', static fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => min($a, $b)));
+    $add('mod', static fn (...$x): int|float => reduce($x, fn ($a, $b): int|float => $a % $b));
+    $add('++', static fn (...$x): string => reduce($x, fn ($a, $b): string => $a . $b));
+    $add('car', static fn (array $x): Symbol|array|string|int|float|bool => current($x));
+    $add('cdr', static fn (array $x): array => array_slice($x, 1));
+    $add('cons', static fn ($a, $b): array => array_merge([$a], (array)$b));
+    $add('class', static fn (string $className): string => match(class_exists($className)) {
         true => $className,
         false => throw new \Exception(sprintf('class name "%s" not found', $className)),
     });
