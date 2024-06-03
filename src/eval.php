@@ -99,6 +99,7 @@ function _eval(object|array|string|int|float|bool $x, HashMapInterface $env): mi
         ControlStructureName::MACRO => new Macro($x),
         ControlStructureName::EVAL => _eval(_eval($x[1], $env), $env),
         ControlStructureName::TYPEOF => _typeOf(_eval($x[1], $env)),
+        ControlStructureName::SYMBOL => _handleSymbol($x[1], $env),
         ControlStructureName::PRINT => _print($x[1], $env),
         ControlStructureName::READ => _handleRead(),
         default => _handleProcedure($x, $env),
@@ -136,6 +137,19 @@ function _typeOf(object|array|int|float|string|bool $x): string
         is_object($x) => get_class($x),
         default => throw new \Exception('Undefined type of $x')
     };
+}
+
+function _handleSymbol(mixed $value, HashMapInterface $env): Symbol
+{
+    $value = match (true) {
+        is_string($value) => $value,
+        is_object($value) && $value instanceof Symbol => $value->name,
+        is_scalar($value) => (string)$value,
+        is_array($value) => _eval($value, $env),
+        default => throw new \Exception(sprintf('symbol operation dont perform object type "%s"', gettype($value)))
+    };
+
+    return new Symbol($value);
 }
 
 /**

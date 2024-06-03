@@ -796,4 +796,24 @@ class EvalTest extends TestCase
 
         assertTrue(_eval([new Symbol('test'), 1, 2, 1, 2], $env));
     }
+
+    public function testSymbol(): void
+    {
+        $env = new HashMap();
+        $env->put(new Symbol($concat = '++'), new Procedure($concat, static fn (...$x): string => reduce($x, fn ($a, $b) => $a . $b)));
+
+        assertEquals(new Symbol('123-abc'), _eval([
+            new Symbol('symbol'),
+            [
+                new Symbol('++'),
+                "123",
+                "-",
+                "abc"
+            ]
+        ], $env), 'Конкатенация строк в Symbol');
+
+        assertEquals(new Symbol('abc'), _eval([new Symbol('symbol'), new Symbol('abc')], $env), 'Symbol => Symbol');
+        assertEquals(new Symbol('123'), _eval([new Symbol('symbol'), 123], $env), 'int => Symbol');
+        assertEquals(new Symbol('123.13'), _eval([new Symbol('symbol'), 123.13], $env), 'float => Symbol');
+    }
 }
