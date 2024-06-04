@@ -184,10 +184,14 @@ while (true) {
         $messageType = $result === null ? MessageType::INFO : MessageType::REGULAR;
         $result = $result ?? 'OK';
     } catch (\Throwable $e) {
+        $prePrint = static function (string $s, int $maxLength): string {
+            $length = strlen($s);
+            return substr($s, 0, $maxLength) . ($length > $maxLength ? ' ...' : '');
+        };
         $result = sprintf(
             "%s\nTrace:\n================\n%s",
-            substr($e->getMessage(), 0, 200),
-            substr($e->getTraceAsString(), 0, 500)
+            $prePrint($e->getMessage(), 1000),
+            $prePrint($e->getTraceAsString(), 5000)
         );
         $messageType = MessageType::ERROR;
         $replMode->setDisposableMode(OutputMode::UNESCAPE);
