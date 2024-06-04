@@ -26,21 +26,36 @@ enum OutputMode: string
 
 class ReplMode
 {
-    protected static ?self $instance = null;
-    public OutputMode $mode;
+    private ?OutputMode $disposableMode = null;
 
-    public static function instance(): self
+    public function __construct(private OutputMode $mode)
     {
-        if(self::$instance === null) {
-            self::$instance = new self();
+    }
+
+    public function setMode(OutputMode $mode): self
+    {
+        $this->mode = $mode;
+        return $this;
+    }
+
+    public function setDisposableMode(OutputMode $mode): self
+    {
+        $this->disposableMode = $mode;
+        return $this;
+    }
+
+    public function getMode(): OutputMode
+    {
+        if($this->disposableMode !== null) {
+            $result = $this->disposableMode;
+            $this->disposableMode = null;
+
+            return $result;
         }
 
-        return self::$instance;
+        return $this->mode;
     }
 }
-
-$outputMode = ReplMode::instance();
-$outputMode->mode = OutputMode::ESCAPE;
 
 enum MessageType: string
 {
@@ -83,8 +98,9 @@ if(file_exists(HISTORY_FILE_PATH)) {
 writeMessage("\n" . str_repeat('=', 53));
 writeMessage("Наберите \033[0;33m:help\033[0m для просмотра списка доступных комманд");
 writeMessage(str_repeat('=', 53) . "\n");
+$replMode = new ReplMode(OutputMode::ESCAPE);
 while (true) {
-    $command = readline(ReplMode::instance()->mode->value);
+    $command = readline($replMode->getMode()->value);
 
     if(empty(str_replace(' ', '', $command))) {
         continue;
@@ -97,11 +113,11 @@ while (true) {
             switch (true) {
                 // режим экранированного вывода
                 case $command === ':esc':
-                    ReplMode::instance()->mode = OutputMode::ESCAPE;
+                    $replMode->setMode(OutputMode::ESCAPE);
                     continue 2;
                     // режим экранированного вывода
                 case $command === ':unesc':
-                    ReplMode::instance()->mode = OutputMode::UNESCAPE;
+                    $replMode->setMode(OutputMode::UNESCAPE);
                     continue 2;
                     // выход
                 case $command === ':quit':
@@ -168,17 +184,22 @@ while (true) {
         $messageType = $result === null ? MessageType::INFO : MessageType::REGULAR;
         $result = $result ?? 'OK';
     } catch (\Throwable $e) {
-        $result = sprintf("%s\n%s", $e->getMessage(), $e->getTraceAsString());
+        $result = sprintf(
+            "%s\nTrace:\n================\n%s",
+            substr($e->getMessage(), 0, 200),
+            substr($e->getTraceAsString(), 0, 500)
+        );
         $messageType = MessageType::ERROR;
+        $replMode->setDisposableMode(OutputMode::UNESCAPE);
     }
 
-    writeMessage(toString($result), $messageType);
+    writeMessage(toString($result, $replMode->getMode()), $messageType);
 }
 readline_write_history(HISTORY_FILE_PATH);
 exit(0);
 
 
-function toString(mixed $value): string
+function toString(mixed $value, OutputMode $mode = OutputMode::ESCAPE): string
 {
     if(is_iterable($value)) {
         $acc = '';
@@ -194,16 +215,16 @@ function toString(mixed $value): string
         $value = new Symbol($value ? 'true' : 'false');
     }
 
-    if(ReplMode::instance()->mode === OutputMode::UNESCAPE) {
+    if(is_object($value) && (!str_starts_with(get_class($value), 'Che\SimpleLisp'))) {
+        $value = sprintf('class %s: %s', get_class($value), substr(serialize($value), 0, 100));
+    }
+
+    if($mode === OutputMode::UNESCAPE) {
         return (string)$value;
     }
 
     if(is_string($value)) {
         $value = sprintf('"%s"', $value);
-    }
-
-    if(is_object($value) && (!str_starts_with(get_class($value), 'Che\SimpleLisp'))) {
-        $value = sprintf('class %s: %s', get_class($value), substr(serialize($value), 0, 100));
     }
 
     return str_replace(["\r", "\n", "\t"], ['\r', '\n', '\t'], (string)$value);
