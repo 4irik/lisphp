@@ -57,6 +57,96 @@ class ReplMode
     }
 }
 
+function makeIndent(int $indent): string
+{
+    return str_repeat('.', $indent * 2);
+}
+
+class BraceCounter
+{
+    private int $count = 0;
+
+    public function inc(): self
+    {
+        $this->count++;
+        return $this;
+    }
+
+    public function dec(): self
+    {
+        if($this->count > 0) {
+            $this->count--;
+        }
+        return $this;
+    }
+
+    public function count(): int
+    {
+        return $this->count;
+    }
+}
+
+/**
+ * @todo не учитывает что скобки могут быть в составе строки
+ *
+ * @throws Exception
+ */
+function consumeLine(BraceCounter $coutner, string $line): void
+{
+    $clipErrorString = static function (string $line, int $errorPosition): string {
+        $leftPadding = 100;
+        $rightPadding = 100;
+
+        $startPos = $errorPosition - $leftPadding;
+        $startPos = ($startPos < 0) ? 0 : $startPos;
+        $endPos = $errorPosition + $rightPadding;
+
+        $pointerLine = str_repeat('-', $errorPosition) . '^' . str_repeat('-', strlen($line) - $errorPosition - 1);
+
+        return sprintf(
+            "%s\n%s",
+            substr($line, $startPos, $endPos),
+            substr($pointerLine, $startPos, $endPos)
+        );
+    };
+
+    foreach (str_split($line) as $k => $char) {
+        if ($char === '(') {
+            $coutner->inc();
+            continue;
+        }
+
+        if($char === ')') {
+            if($coutner->count() === 0) {
+                throw new \Exception("Лишняя закрывающая скобка:\n" . $clipErrorString($line, $k));
+            }
+
+            $coutner->dec();
+        }
+    }
+}
+
+function multiInput(OutputMode $mode): string
+{
+    $counter = new BraceCounter();
+
+    $prompt = $mode->value;
+    $result = '';
+    while (true) {
+        $line = readline($prompt);
+
+        consumeLine($counter, $line);
+        $prompt = makeIndent($counter->count());
+        $result .= $line . ' ';
+
+        if($counter->count() === 0) {
+            break;
+        }
+    }
+
+    return trim($result);
+}
+
 enum MessageType: string
 {
     case REGULAR = '';
@@ -100,7 +190,7 @@ writeMessage("Наберите \033[0;33m:help\033[0m для просмотра 
 writeMessage(str_repeat('=', 53) . "\n");
 $replMode = new ReplMode(OutputMode::ESCAPE);
 while (true) {
-    $command = readline($replMode->getMode()->value);
+    $command = multiInput($replMode->getMode());
 
     if(empty(str_replace(' ', '', $command))) {
         continue;
