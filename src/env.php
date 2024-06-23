@@ -59,6 +59,10 @@ function _defaultEnv(): HashMapInterface
                 }
             };
         }
+        // вызов invocable-объекта
+        if(!method_exists($fn, (string)$method) && is_callable($fn)) {
+            return $fn($method, ...$args);
+        }
 
         return [$fn, $method](...$args);
     });

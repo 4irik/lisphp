@@ -70,10 +70,8 @@ class EnvTest extends TestCase
         );
     }
 
-    #[Group('ignore')]
     public function testInteropCallableObject(): void
     {
-        // todo: вызов объекта как функции
         $obj = new class () {
             public function __invoke(int $i): int
             {
