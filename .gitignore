@@ -1,3 +1,7 @@
 /vendor/
 .php-cs-fixer.cache
 composer.lock
+.idea
+.repl_history
+.phpunit.result.cache
+/var/*
