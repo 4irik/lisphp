@@ -15,6 +15,6 @@ class SymbolTest extends TestCase
     {
         $s = new Symbol('test');
         self::assertEquals('test', $s->name);
-        self::assertEquals('test', (string)$s);
+        self::assertEquals('test', (string) $s);
     }
 }

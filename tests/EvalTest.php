@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Test;
 
+use Che\SimpleLisp\HashMap;
 use Che\SimpleLisp\Lambda;
 use Che\SimpleLisp\Macro;
-use Che\SimpleLisp\HashMap;
 use Che\SimpleLisp\Procedure;
 use Che\SimpleLisp\Symbol;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -25,12 +25,12 @@ class EvalTest extends TestCase
 {
     public function testReduce(): void
     {
-        assertEquals(10, reduce([1,2,3,4], fn (int $a, int $b) => $a + $b));
+        assertEquals(10, reduce([1, 2, 3, 4], fn(int $a, int $b) => $a + $b));
     }
 
     public function testMap(): void
     {
-        assertEquals([2, 4, 6], iterator_to_array(map([1,2,3], fn (int $x) => $x * 2)));
+        assertEquals([2, 4, 6], iterator_to_array(map([1, 2, 3], fn(int $x) => $x * 2)));
     }
 
     public function testEvalScalar(): void
@@ -45,7 +45,7 @@ class EvalTest extends TestCase
     {
         $env = new HashMap();
         $env->put(new Symbol('a'), 10);
-        $env->put(new Symbol($eq = '=='), $procedure = new Procedure($eq, fn ($a, $b) => $a == $b));
+        $env->put(new Symbol($eq = '=='), $procedure = new Procedure($eq, fn($a, $b) => $a == $b));
 
         assertEquals(10, _eval(new Symbol('a'), $env));
         assertEquals($procedure, _eval(new Symbol('=='), $env));
@@ -75,7 +75,7 @@ class EvalTest extends TestCase
         assertFalse($env->has(new Symbol('a')));
         assertFalse($env->has(new Symbol('b')));
 
-        _eval([new Symbol('def'), new Symbol('a'), 1, new Symbol('b'), [new Symbol('cond'), true, 10 ,20]], $env);
+        _eval([new Symbol('def'), new Symbol('a'), 1, new Symbol('b'), [new Symbol('cond'), true, 10, 20]], $env);
 
         assertEquals(1, $env->get(new Symbol('a')));
         assertEquals(10, $env->get(new Symbol('b')));
@@ -153,7 +153,7 @@ class EvalTest extends TestCase
         assertEquals('b2_2', _eval(new Symbol('b'), $env2));
     }
 
-    #[DataProvider("typeOfDP")]
+    #[DataProvider('typeOfDP')]
     public function testTypeOf(mixed $value, string $expectedType): void
     {
         assertEquals($expectedType, _typeOf($value));
@@ -163,9 +163,9 @@ class EvalTest extends TestCase
     {
         yield 'int' => [123, 'int'];
         yield 'float' => [123.1, 'float'];
-        yield 'string' => ["abc", 'str'];
+        yield 'string' => ['abc', 'str'];
         yield 'boolean' => [true, 'bool'];
-        yield 'list' => [[1,2,3], 'ConsList'];
+        yield 'list' => [[1, 2, 3], 'ConsList'];
         yield 'Symbol' => [new Symbol('a'), 'Symbol'];
         yield 'lambda' => [new Lambda(['lambda', [], 10], new HashMap()), 'Lambda'];
         yield 'macro' => [new Macro(['macro', [], 10]), 'Macro'];
@@ -178,7 +178,11 @@ class EvalTest extends TestCase
         assertFalse($env->has(new Symbol('a')));
         assertFalse($env->has(new Symbol('b')));
 
-        assertEquals(10, _eval([new Symbol('do'), [new Symbol('def'), 'a', 1], [new Symbol('cond'), true, 10 ,20]], $env));
+        assertEquals(10, _eval([
+            new Symbol('do'),
+            [new Symbol('def'), 'a', 1],
+            [new Symbol('cond'), true, 10, 20],
+        ], $env));
         assertEquals(1, $env->get(new Symbol('a')));
         assertEquals(5, _eval([new Symbol('do'), 2, 3, 5], $env));
     }
@@ -214,8 +218,11 @@ class EvalTest extends TestCase
             [
                 new Symbol('quote'),
                 [
-                    new Symbol('cond'), false, 1, 2
-                ]
+                    new Symbol('cond'),
+                    false,
+                    1,
+                    2,
+                ],
             ],
         ], new HashMap()));
     }
@@ -223,8 +230,8 @@ class EvalTest extends TestCase
     public function testProcedureEmbedded(): void
     {
         $env = new HashMap();
-        $env->put(new Symbol($sum = '+'), new Procedure($sum, fn (...$x) => reduce($x, fn ($a, $b) => $a + $b)));
-        $env->put(new Symbol($qteq = '>='), new Procedure($qteq, fn ($a, $b) => $a >= $b));
+        $env->put(new Symbol($sum = '+'), new Procedure($sum, fn(...$x) => reduce($x, fn($a, $b) => $a + $b)));
+        $env->put(new Symbol($qteq = '>='), new Procedure($qteq, fn($a, $b) => $a >= $b));
 
         assertEquals(10, _eval([new Symbol('+'), 1, 2, 3, 4], $env));
         assertTrue(_eval([new Symbol('>='), 10, 9], $env));
@@ -233,7 +240,7 @@ class EvalTest extends TestCase
     public function testDeepEvaluation(): void
     {
         $env = new HashMap();
-        $env->put(new Symbol($sum = '+'), new Procedure($sum, fn (...$x) => reduce($x, fn ($a, $b) => $a + $b)));
+        $env->put(new Symbol($sum = '+'), new Procedure($sum, fn(...$x) => reduce($x, fn($a, $b) => $a + $b)));
 
         assertEquals(10, _eval([new Symbol('+'), 1, 2, [new Symbol('+'), 3, 4]], $env));
     }
@@ -250,7 +257,7 @@ class EvalTest extends TestCase
     public function testLambda(): void
     {
         $env = new HashMap();
-        $env->put(new Symbol($sum = '+'), new Procedure($sum, fn (...$x) => reduce($x, fn ($a, $b) => $a + $b)));
+        $env->put(new Symbol($sum = '+'), new Procedure($sum, fn(...$x) => reduce($x, fn($a, $b) => $a + $b)));
 
         assertEquals(10, _eval([
             [
@@ -265,9 +272,11 @@ class EvalTest extends TestCase
                     new Symbol('x'),
                     new Symbol('y'),
                     new Symbol('z'),
-                ]
+                ],
             ],
-            2,3,5
+            2,
+            3,
+            5,
         ], $env));
         assertFalse($env->has(new Symbol('x')));
         assertFalse($env->has(new Symbol('y')));
@@ -276,9 +285,8 @@ class EvalTest extends TestCase
         assertEquals(15, _eval([
             [
                 new Symbol('lambda'),
-                [
-                ],
-                15
+                [],
+                15,
             ],
         ], $env));
     }
@@ -286,7 +294,7 @@ class EvalTest extends TestCase
     public function testLambdaGlobalEnv(): void
     {
         $env = new HashMap();
-        $env->put(new Symbol($sum = '+'), new Procedure($sum, fn (...$x) => reduce($x, fn ($a, $b) => $a + $b)));
+        $env->put(new Symbol($sum = '+'), new Procedure($sum, fn(...$x) => reduce($x, fn($a, $b) => $a + $b)));
 
         _eval([
             new Symbol('def'),
@@ -302,8 +310,8 @@ class EvalTest extends TestCase
                     new Symbol('x'),
                     new Symbol('y'),
                     new Symbol('z'),
-                ]
-            ]
+                ],
+            ],
         ], $env);
 
         _eval([new Symbol('def'), new Symbol('z'), 10], $env);
@@ -316,18 +324,17 @@ class EvalTest extends TestCase
     public function testLambdaLocalEnv(): void
     {
         $env = new HashMap();
-        $env->put(new Symbol($concat = '++'), new Procedure($concat, fn (...$x) => reduce($x, fn ($a, $b) => $a . $b)));
+        $env->put(new Symbol($concat = '++'), new Procedure($concat, fn(...$x) => reduce($x, fn($a, $b) => $a . $b)));
 
         _eval([
             [
                 new Symbol('lambda'),
-                [
-                ],
+                [],
                 [
                     new Symbol('def'),
                     new Symbol('x'),
                     10,
-                ]
+                ],
             ],
         ], $env);
 
@@ -339,7 +346,7 @@ class EvalTest extends TestCase
         _eval([
             new Symbol('def'),
             new Symbol('var_1'),
-            "test_1",
+            'test_1',
             new Symbol('val_1'),
             15,
         ], $env);
@@ -355,10 +362,10 @@ class EvalTest extends TestCase
                     [
                         new Symbol('++'),
                         new Symbol('x'),
-                        ""
+                        '',
                     ],
                     new Symbol('y'),
-                ]
+                ],
             ],
             new Symbol('var_1'),
             new Symbol('val_1'),
@@ -376,7 +383,7 @@ class EvalTest extends TestCase
     public function testLambdaCatchDeclarationEnv(): void
     {
         $env = new HashMap();
-        $env->put(new Symbol($sum = '+'), new Procedure($sum, fn (...$x) => reduce($x, fn ($a, $b) => $a + $b)));
+        $env->put(new Symbol($sum = '+'), new Procedure($sum, fn(...$x) => reduce($x, fn($a, $b) => $a + $b)));
 
         _eval([
             new Symbol('def'),
@@ -386,14 +393,14 @@ class EvalTest extends TestCase
             [
                 new Symbol('lambda'),
                 [
-                    new Symbol('x')
+                    new Symbol('x'),
                 ],
                 [
                     new Symbol('+'),
                     new Symbol('x'),
-                    new Symbol('a')
-                ]
-            ]
+                    new Symbol('a'),
+                ],
+            ],
         ], $env);
 
         assertEquals(15, _eval([new Symbol('l1'), 5], $env));
@@ -412,16 +419,15 @@ class EvalTest extends TestCase
                     [
                         new Symbol('def'),
                         new Symbol('a'),
-                        new Symbol('x')
+                        new Symbol('x'),
                     ],
                     [
                         new Symbol('l1'),
                         new Symbol('b'),
-                    ]
-                ]
-            ]
+                    ],
+                ],
+            ],
         ], $env);
-
 
         assertEquals(15, _eval([new Symbol('l2'), 15, 5], $env));
     }
@@ -429,8 +435,8 @@ class EvalTest extends TestCase
     public function testLambdaOOP(): void
     {
         $env = new HashMap();
-        $env->put(new Symbol($sum = '+'), new Procedure($sum, fn (...$x) => reduce($x, fn ($a, $b) => $a + $b)));
-        $env->put(new Symbol($eq = '='), new Procedure($eq, fn ($a, $b) => $a == $b));
+        $env->put(new Symbol($sum = '+'), new Procedure($sum, fn(...$x) => reduce($x, fn($a, $b) => $a + $b)));
+        $env->put(new Symbol($eq = '='), new Procedure($eq, fn($a, $b) => $a == $b));
 
         _eval([
             new Symbol('def'),
@@ -438,7 +444,7 @@ class EvalTest extends TestCase
             [
                 new Symbol('lambda'),
                 [
-                    new Symbol('x')
+                    new Symbol('x'),
                 ],
                 [
                     new Symbol('do'),
@@ -448,7 +454,7 @@ class EvalTest extends TestCase
                         [
                             new Symbol('lambda'),
                             [],
-                            new Symbol('x')
+                            new Symbol('x'),
                         ],
                     ],
                     [
@@ -467,17 +473,17 @@ class EvalTest extends TestCase
                                     [
                                         new Symbol('+'),
                                         new Symbol('x'),
-                                        new Symbol('y')
-                                    ]
+                                        new Symbol('y'),
+                                    ],
                                 ],
                                 new Symbol('x'),
-                            ]
-                        ]
+                            ],
+                        ],
                     ],
                     [
                         new Symbol('lambda'),
                         [
-                            new Symbol('cmd')
+                            new Symbol('cmd'),
                         ],
                         [
                             new Symbol('cond'),
@@ -486,46 +492,45 @@ class EvalTest extends TestCase
                                 new Symbol('cmd'),
                                 [
                                     new Symbol('quote'),
-                                    new Symbol('add')
-                                ]
+                                    new Symbol('add'),
+                                ],
                             ],
                             new Symbol('add'),
-                            new Symbol('get')
-                        ]
+                            new Symbol('get'),
+                        ],
                     ],
-                ]
-            ]
+                ],
+            ],
         ], $env);
 
         _eval([
             new Symbol('def'),
             new Symbol('o1'),
-            [new Symbol('obj'), 100]
+            [new Symbol('obj'), 100],
         ], $env);
 
         assertEquals(100, _eval([
             [new Symbol('o1'), [new Symbol('quote'), new Symbol('get')]],
-            ""
+            '',
         ], $env));
 
-
         assertEquals(110, _eval([
-            [new Symbol('o1'), "add"],
-            10
+            [new Symbol('o1'), 'add'],
+            10,
         ], $env));
 
         assertEquals(110, _eval([
             [new Symbol('o1'), [new Symbol('quote'), new Symbol('get')]],
-            ""
+            '',
         ], $env));
     }
 
     public function testLambdaRecursion(): void
     {
         $env = new HashMap();
-        $env->put(new Symbol($sub = '-'), new Procedure($sub, fn (int $a, int $b): int => $a - $b));
-        $env->put(new Symbol($mul = '*'), new Procedure($mul, fn (int $a, int $b): int => $a * $b));
-        $env->put(new Symbol($eq = '='), new Procedure($eq, fn ($a, $b) => $a == $b));
+        $env->put(new Symbol($sub = '-'), new Procedure($sub, fn(int $a, int $b): int => $a - $b));
+        $env->put(new Symbol($mul = '*'), new Procedure($mul, fn(int $a, int $b): int => $a * $b));
+        $env->put(new Symbol($eq = '='), new Procedure($eq, fn($a, $b) => $a == $b));
 
         _eval([
             new Symbol('def'),
@@ -540,7 +545,7 @@ class EvalTest extends TestCase
                     [
                         new Symbol('='),
                         new Symbol('n'),
-                        1
+                        1,
                     ],
                     1,
                     [
@@ -551,10 +556,10 @@ class EvalTest extends TestCase
                             [
                                 new Symbol('-'),
                                 new Symbol('n'),
-                                1
-                            ]
-                        ]
-                    ]
+                                1,
+                            ],
+                        ],
+                    ],
                 ],
             ],
         ], $env);
@@ -565,9 +570,12 @@ class EvalTest extends TestCase
     public function testLambdaParameterGreaterThenArguments(): void
     {
         $env = new HashMap();
-        $env->put(new Symbol($sum = '+'), new Procedure($sum, static fn (int $a, int $b): int => $a + $b));
-        $env->put(new Symbol($car = 'car'), new Procedure($car, static fn (array $x): Symbol|array|string|int|float|bool => current($x)));
-        $env->put(new Symbol($cdr = 'cdr'), new Procedure($cdr, static fn (array $x): array => array_slice($x, 1)));
+        $env->put(new Symbol($sum = '+'), new Procedure($sum, static fn(int $a, int $b): int => $a + $b));
+        $env->put(
+            new Symbol($car = 'car'),
+            new Procedure($car, static fn(array $x): Symbol|array|string|int|float|bool => current($x)),
+        );
+        $env->put(new Symbol($cdr = 'cdr'), new Procedure($cdr, static fn(array $x): array => array_slice($x, 1)));
 
         _eval([
             new Symbol('def'),
@@ -586,7 +594,7 @@ class EvalTest extends TestCase
                         [
                             new Symbol('cdr'),
                             new Symbol('y'),
-                        ]
+                        ],
                     ],
                 ],
             ],
@@ -598,7 +606,7 @@ class EvalTest extends TestCase
     public function testMacroEval(): void
     {
         $env = new HashMap();
-        $env->put(new Symbol($sum = '+'), new Procedure($sum, fn (...$x) => reduce($x, fn ($a, $b) => $a + $b)));
+        $env->put(new Symbol($sum = '+'), new Procedure($sum, fn(...$x) => reduce($x, fn($a, $b) => $a + $b)));
         $env->put(new Symbol('l1'), new Lambda(['', [], 10], $env));
 
         _eval([
@@ -620,33 +628,30 @@ class EvalTest extends TestCase
             ],
         ], $env);
 
-        assertEquals(
-            5,
-            _eval([
-                new Symbol('m1'),
-                true,
-                [new Symbol('+'), 2, 3],
-                new Symbol('l1')
-            ], $env)
-        );
+        assertEquals(5, _eval([
+            new Symbol('m1'),
+            true,
+            [new Symbol('+'), 2, 3],
+            new Symbol('l1'),
+        ], $env));
         assertEquals(0, $env->childList()->count());
 
-        assertEquals(
-            10,
-            _eval([
-                new Symbol('m1'),
-                false,
-                [new Symbol('+'), 3, 3],
-                new Symbol('l1')
-            ], $env)
-        );
+        assertEquals(10, _eval([
+            new Symbol('m1'),
+            false,
+            [new Symbol('+'), 3, 3],
+            new Symbol('l1'),
+        ], $env));
         assertEquals(1, $env->childList()->count());
     }
 
     public function testMacroEnv(): void
     {
         $env = new HashMap();
-        $env->put(new Symbol($concat = '++'), new Procedure($concat, fn (...$x): string => reduce($x, fn ($a, $b): string => $a . $b)));
+        $env->put(
+            new Symbol($concat = '++'),
+            new Procedure($concat, fn(...$x): string => reduce($x, fn($a, $b): string => $a . $b)),
+        );
 
         _eval([
             new Symbol('def'),
@@ -662,13 +667,13 @@ class EvalTest extends TestCase
                     new Symbol('x'),
                     new Symbol('y'),
                 ],
-            ]
+            ],
         ], $env);
 
         _eval([
             new Symbol('m1'),
             new Symbol('a'),
-            10
+            10,
         ], $env);
         assertEquals(10, $env->get(new Symbol('a')));
         assertEquals(0, $env->childList()->count());
@@ -682,12 +687,12 @@ class EvalTest extends TestCase
                 ],
                 [
                     new Symbol('m1'),
-                    [new Symbol('++'), new Symbol('x'), ""],
-                    new Symbol('y')
-                ]
+                    [new Symbol('++'), new Symbol('x'), ''],
+                    new Symbol('y'),
+                ],
             ],
             new Symbol('b'),
-            20
+            20,
         ], $env);
         assertFalse($env->has(new Symbol('b')));
         $childList = $env->childList();
@@ -717,14 +722,11 @@ class EvalTest extends TestCase
                         new Symbol('macro'),
                         new Symbol('args'),
                         new Symbol('body'),
-                    ]
-                ]
-            ]
+                    ],
+                ],
+            ],
         ], $env);
-        assertEquals(
-            new Macro($defmacro),
-            $env->get(new Symbol('defmacro'))
-        );
+        assertEquals(new Macro($defmacro), $env->get(new Symbol('defmacro')));
 
         _eval([
             new Symbol('defmacro'),
@@ -741,36 +743,36 @@ class EvalTest extends TestCase
                     new Symbol('lambda'),
                     new Symbol('args'),
                     new Symbol('body'),
-                ]
-            ]
+                ],
+            ],
         ], $env);
-        assertEquals(
-            new Macro([
-                new Symbol('macro'),
+        assertEquals(new Macro([
+            new Symbol('macro'),
+            [
+                new Symbol('name'),
+                new Symbol('args'),
+                new Symbol('body'),
+            ],
+            [
+                new Symbol('def'),
+                new Symbol('name'),
                 [
-                    new Symbol('name'),
+                    new Symbol('lambda'),
                     new Symbol('args'),
                     new Symbol('body'),
                 ],
-                [
-                    new Symbol('def'),
-                    new Symbol('name'),
-                    [
-                        new Symbol('lambda'),
-                        new Symbol('args'),
-                        new Symbol('body'),
-                    ]
-                ]
-            ]),
-            $env->get(new Symbol('defn'))
-        );
+            ],
+        ]), $env->get(new Symbol('defn')));
     }
 
     public function testMacroParameterGreaterThenArguments(): void
     {
         $env = new HashMap();
-        $env->put(new Symbol($cons = 'cons'), new Procedure($cons, static fn ($a, $b): array => array_merge([$a], (array)$b)));
-        $env->put(new Symbol($eq = '='), new Procedure($eq, static fn ($a, $b) => $a == $b));
+        $env->put(
+            new Symbol($cons = 'cons'),
+            new Procedure($cons, static fn($a, $b): array => array_merge([$a], (array) $b)),
+        );
+        $env->put(new Symbol($eq = '='), new Procedure($eq, static fn($a, $b) => $a == $b));
 
         _eval([
             new Symbol('def'),
@@ -787,11 +789,11 @@ class EvalTest extends TestCase
                     [
                         new Symbol('cons'),
                         new Symbol('x'),
-                        new Symbol('y')
+                        new Symbol('y'),
                     ],
-                    new Symbol('z')
+                    new Symbol('z'),
                 ],
-            ]
+            ],
         ], $env);
 
         assertTrue(_eval([new Symbol('test'), 1, 2, 1, 2], $env));
@@ -800,17 +802,24 @@ class EvalTest extends TestCase
     public function testSymbol(): void
     {
         $env = new HashMap();
-        $env->put(new Symbol($concat = '++'), new Procedure($concat, static fn (...$x): string => reduce($x, fn ($a, $b) => $a . $b)));
+        $env->put(
+            new Symbol($concat = '++'),
+            new Procedure($concat, static fn(...$x): string => reduce($x, fn($a, $b) => $a . $b)),
+        );
 
-        assertEquals(new Symbol('123-abc'), _eval([
-            new Symbol('symbol'),
-            [
-                new Symbol('++'),
-                "123",
-                "-",
-                "abc"
-            ]
-        ], $env), 'Конкатенация строк в Symbol');
+        assertEquals(
+            new Symbol('123-abc'),
+            _eval([
+                new Symbol('symbol'),
+                [
+                    new Symbol('++'),
+                    '123',
+                    '-',
+                    'abc',
+                ],
+            ], $env),
+            'Конкатенация строк в Symbol',
+        );
 
         assertEquals(new Symbol('abc'), _eval([new Symbol('symbol'), new Symbol('abc')], $env), 'Symbol => Symbol');
         assertEquals(new Symbol('123'), _eval([new Symbol('symbol'), 123], $env), 'int => Symbol');

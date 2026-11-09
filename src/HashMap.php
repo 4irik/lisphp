@@ -19,7 +19,7 @@ class HashMap implements HashMapInterface, \IteratorAggregate
     {
         $this->parent = $parent;
         $this->child = new \WeakMap();
-        if($parent !== null) {
+        if ($parent !== null) {
             $parent->child[$this] = $this;
         }
     }
@@ -54,7 +54,8 @@ class HashMap implements HashMapInterface, \IteratorAggregate
         unset($this->_map[$symbol->name]);
     }
 
-    #[\Override] public function getIterator(): \Traversable
+    #[\Override]
+    public function getIterator(): \Traversable
     {
         return new \ArrayIterator($this->_map);
     }

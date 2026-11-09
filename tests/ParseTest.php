@@ -10,14 +10,14 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
 use function Che\SimpleLisp\Parse\_atom;
-use function Che\SimpleLisp\Parse\parseTokens;
 use function Che\SimpleLisp\Parse\_parseTokens;
+use function Che\SimpleLisp\Parse\parseTokens;
 use function Che\SimpleLisp\Parse\tokenize;
 use function PHPUnit\Framework\assertEquals;
 
 class ParseTest extends TestCase
 {
-    #[DataProvider("tokenDP")]
+    #[DataProvider('tokenDP')]
     public function testTokenizer(array $expectedList, string $program): void
     {
         self::assertEquals($expectedList, tokenize($program));
@@ -26,10 +26,10 @@ class ParseTest extends TestCase
     public function testSkipCommentAtStartLine(): void
     {
         $command = <<<EON
-; some comment
-;another text
-(+ 0 1)
-EON;
+            ; some comment
+            ;another text
+            (+ 0 1)
+            EON;
 
         self::assertEquals(['(', '+', '0', '1', ')'], tokenize($command));
     }
@@ -71,32 +71,38 @@ EON;
 
     public function testParseTokenList(): void
     {
-        assertEquals([
-            new Symbol('+'),
-            1,
+        assertEquals(
             [
-                new Symbol('-'),
-                10,
-                1.3
-            ]
-        ], parseTokens(['(', '+', '1', '(', '-', '10', '1.3', ')', ')']));
+                new Symbol('+'),
+                1,
+                [
+                    new Symbol('-'),
+                    10,
+                    1.3,
+                ],
+            ],
+            parseTokens(['(', '+', '1', '(', '-', '10', '1.3', ')', ')']),
+        );
     }
 
     public function testParseShortQuote(): void
     {
         assertEquals([
             new Symbol('quote'),
-            new Symbol('abc')
+            new Symbol('abc'),
         ], parseTokens(['\'', 'abc']));
 
-        assertEquals([
-            new Symbol('quote'),
+        assertEquals(
             [
-                new Symbol('-'),
-                10,
-                1.3
-            ]
-        ], parseTokens(['\'', '(', '-', '10', '1.3', ')']));
+                new Symbol('quote'),
+                [
+                    new Symbol('-'),
+                    10,
+                    1.3,
+                ],
+            ],
+            parseTokens(['\'', '(', '-', '10', '1.3', ')']),
+        );
     }
 
     public static function tokenDP(): iterable
@@ -124,51 +130,51 @@ EON;
         yield [['test-1'], 'test-1'];
         yield [['test_1'], 'test_1'];
 
-        $newLine = "
-";
-        yield [['(', 'def', 'n', "\"\n\"", ')'], '(def n "'.$newLine.'")'];
+        $newLine = '
+';
+        yield [['(', 'def', 'n', "\"\n\"", ')'], '(def n "' . $newLine . '")'];
     }
 
     public static function atomDP(): iterable
     {
         yield 'Int' => [
             '13',
-            13
+            13,
         ];
 
         yield 'Float' => [
             '13.1',
-            13.1
+            13.1,
         ];
 
         yield 'True' => [
             'true',
-            true
+            true,
         ];
 
         yield 'False' => [
             'false',
-            false
+            false,
         ];
 
         yield 'String' => [
             '"some string"',
-            'some string'
+            'some string',
         ];
 
         yield 'Empty string' => [
             '""',
-            ''
+            '',
         ];
 
         yield 'Quote short' => [
             '\'',
-            new Symbol('quote')
+            new Symbol('quote'),
         ];
 
         yield 'Symbol' => [
             'def',
-            new Symbol('def')
+            new Symbol('def'),
         ];
     }
 }

@@ -26,25 +26,26 @@ function tokenize(string $program): iterable
     // удаляем комментарии
     $program = preg_replace('/^;.*/m', '', $program);
 
-    preg_match_all('/\(|\)|[-\/\\\_!?\.\w+]{2,}|\w+|\"[^"]*\"|[-\'=><?!*\/+\\\]+/m', $program, $m, PREG_UNMATCHED_AS_NULL);
-
-    return array_values(
-        array_filter(
-            array_map(
-                fn (string $item): string => trim($item),
-                $m[0]
-                //                explode(
-                //                    ' ',
-                //                    str_replace(['(', ')', '\''], [' ( ', ' ) ', ' \' '], $program)
-                //                )
-            ),
-            fn ($val) => match ($val) {
-                '0' => true,
-                "\n", "\r", "\t", "\r\n" => false,
-                default => !in_array(substr($val, 0, 1), ["\n", "\r", "\t"]) && !empty($val)
-            }
-        )
+    preg_match_all(
+        '/\(|\)|[-\/\\\_!?\.\w+]{2,}|\w+|\"[^"]*\"|[-\'=><?!*\/+\\\]+/m',
+        $program,
+        $m,
+        PREG_UNMATCHED_AS_NULL,
     );
+
+    return array_values(array_filter(
+        array_map(fn(string $item): string => trim($item), $m[0]
+            //                explode(
+            //                    ' ',
+            //                    str_replace(['(', ')', '\''], [' ( ', ' ) ', ' \' '], $program)
+            //                )
+        ),
+        fn($val) => match ($val) {
+            '0' => true,
+            "\n", "\r", "\t", "\r\n" => false,
+            default => !in_array(substr($val, 0, 1), ["\n", "\r", "\t"]) && !empty($val),
+        },
+    ));
 }
 
 /**
@@ -52,18 +53,18 @@ function tokenize(string $program): iterable
  */
 function _atom(string $token): int|float|bool|string|Symbol
 {
-    if(is_numeric($token)) {
-        return is_int($token) ? (int)$token : (float) $token;
+    if (is_numeric($token)) {
+        return is_int($token) ? (int) $token : (float) $token;
     }
 
-    if($token === 'true') {
+    if ($token === 'true') {
         return true;
     }
-    if($token === 'false') {
+    if ($token === 'false') {
         return false;
     }
 
-    if($token[0] === '"') { // todo: проверить что заканчивается на '"'
+    if ($token[0] === '"') { // todo: проверить что заканчивается на '"'
         return substr($token, 1, -1);
     }
 
@@ -77,7 +78,7 @@ function _atom(string $token): int|float|bool|string|Symbol
  */
 function parseTokens(iterable $tokens): int|float|bool|string|Symbol|iterable
 {
-    if(!$tokens instanceof \SplDoublyLinkedList) {
+    if (!$tokens instanceof \SplDoublyLinkedList) {
         $buf = new \SplDoublyLinkedList();
         foreach ($tokens as $t) {
             $buf->push($t);
@@ -95,18 +96,18 @@ function parseTokens(iterable $tokens): int|float|bool|string|Symbol|iterable
  */
 function _parseTokens(\SplDoublyLinkedList $tokens): int|float|bool|string|Symbol|iterable
 {
-    if($tokens->isEmpty()) {
+    if ($tokens->isEmpty()) {
         throw new \Exception('Unexpected EOF');
     }
     $token = $tokens->shift();
-    if($token === ')') {
+    if ($token === ')') {
         throw new \Exception('Unexpected ")"');
     }
-    if($token === '(') {
+    if ($token === '(') {
         $elements = [];
         while ($tokens[0] !== ')') {
             $elements[] = _parseTokens($tokens);
-            if($tokens->isEmpty()) {
+            if ($tokens->isEmpty()) {
                 throw new \Exception('Unexpected EOF');
             }
         }
@@ -114,7 +115,7 @@ function _parseTokens(\SplDoublyLinkedList $tokens): int|float|bool|string|Symbo
         return $elements;
     }
 
-    if($token === '\'') {
+    if ($token === '\'') {
         return [
             _atom($token),
             _parseTokens($tokens),
