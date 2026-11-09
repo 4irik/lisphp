@@ -21,10 +21,24 @@ final readonly class Form implements \IteratorAggregate
      */
     public function toArray(): array
     {
-        return array_map(
-            static fn (mixed $item): mixed => $item instanceof self ? $item->toArray() : $item,
-            $this->items,
-        );
+        return array_map(self::data(...), $this->items);
+    }
+
+    public static function data(mixed $value): mixed
+    {
+        if ($value instanceof Located) {
+            return self::data($value->value);
+        }
+
+        if ($value instanceof self) {
+            return $value->toArray();
+        }
+
+        if (is_array($value)) {
+            return array_map(self::data(...), $value);
+        }
+
+        return $value;
     }
 
     public function getIterator(): \Traversable

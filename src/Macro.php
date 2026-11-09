@@ -63,6 +63,14 @@ final readonly class Macro implements \IteratorAggregate
             return $argsMap->get($node);
         }
 
+        if ($node instanceof Located) {
+            if ($node->value instanceof Symbol && $argsMap->has($node->value)) {
+                return $argsMap->get($node->value);
+            }
+
+            return $node;
+        }
+
         if ($node instanceof Form) {
             $items = [];
             foreach ($node->items as $item) {

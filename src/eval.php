@@ -8,6 +8,7 @@ use Che\SimpleLisp\ControlStructureName;
 use Che\SimpleLisp\Form;
 use Che\SimpleLisp\HashMapInterface;
 use Che\SimpleLisp\Lambda;
+use Che\SimpleLisp\Located;
 use Che\SimpleLisp\Macro;
 use Che\SimpleLisp\Procedure;
 use Che\SimpleLisp\RuntimeError;
@@ -23,16 +24,45 @@ use Che\SimpleLisp\TailCall;
 function reduce(iterable $list, \Closure $f): mixed
 {
     $acc = null;
+    $accIndex = 0;
+    $index = 0;
     foreach ($list as $item) {
         if (null === $acc) {
             $acc = $item;
+            $accIndex = $index;
+            $index++;
             continue;
         }
 
-        $acc = $f($acc, $item);
+        try {
+            $next = $f($acc, $item);
+        } catch (RuntimeError | OperandFailure $error) {
+            throw $error;
+        } catch (\Throwable $error) {
+            $accIsNumber = is_int($acc) || is_float($acc);
+            $itemIsNumber = is_int($item) || is_float($item);
+            $blame = !$accIsNumber && $itemIsNumber ? $accIndex : $index;
+            throw new OperandFailure($blame, $error);
+        }
+
+        $acc = $next;
+        $accIndex = $index;
+        $index++;
     }
 
     return $acc;
+}
+
+/**
+ * @return array{int, int, string}|null
+ */
+function argumentPlace(mixed $expr): ?array
+{
+    if ($expr instanceof Form || $expr instanceof Located) {
+        return [$expr->line, $expr->column, $expr->sourceLine];
+    }
+
+    return null;
 }
 
 /**
@@ -90,6 +120,16 @@ function _eval(object|array|string|int|float|bool $x, HashMapInterface $env, boo
         return $symbolEnv->has($x) ? $symbolEnv->get($x) : $x;
     }
 
+    if ($x instanceof Located) {
+        try {
+            return _eval($x->value, $env, $tail);
+        } catch (RuntimeError $error) {
+            throw $error;
+        } catch (\Throwable $error) {
+            throw new RuntimeError($error->getMessage(), $x->line, $x->column, $x->sourceLine, $error);
+        }
+    }
+
     if ($x instanceof Form) {
         try {
             return _eval($x->items, $env, $tail);
@@ -109,13 +149,16 @@ function _eval(object|array|string|int|float|bool $x, HashMapInterface $env, boo
     }
 
     $head = $x[0];
+    if ($head instanceof Located) {
+        $head = $head->value;
+    }
     $procedure = ControlStructureName::tryFrom((is_array($head) || $head instanceof Form) ? '' : (string) $head);
     return match ($procedure) {
         ControlStructureName::COND => _handleIf($x, $env, $tail),
         ControlStructureName::DEF => _handleDefine($x, $env),
         ControlStructureName::SET => _handleSet($x, $env),
         ControlStructureName::DO => _handleDo($x, $env, $tail),
-        ControlStructureName::QUOTE => $x[1] instanceof Form ? $x[1]->toArray() : $x[1],
+        ControlStructureName::QUOTE => Form::data($x[1]),
         ControlStructureName::LAMBDA => new Lambda($x, $env),
         ControlStructureName::MACRO => new Macro($x),
         ControlStructureName::EVAL => _eval(_eval($x[1], $env), $env, $tail),
@@ -162,6 +205,10 @@ function _typeOf(object|array|int|float|string|bool $x): string
 
 function _handleSymbol(mixed $value, HashMapInterface $env): Symbol
 {
+    if ($value instanceof Located) {
+        $value = $value->value;
+    }
+
     $value = match (true) {
         is_string($value) => $value,
         is_object($value) && $value instanceof Symbol => $value->name,
@@ -196,7 +243,7 @@ function _handleDefine(array $x, HashMapInterface $env): null
     }
     foreach (array_chunk($x, 2) as [$expSymbol, $exprValue]) {
         $env->put(
-            $expSymbol instanceof Symbol ? $expSymbol : new Symbol((string) _eval($expSymbol, $env)),
+            bindingSymbol($expSymbol, $env),
             _eval($exprValue, $env),
         );
     }
@@ -211,7 +258,7 @@ function _handleSet(array $x, HashMapInterface $env): null
     }
 
     foreach (array_chunk($x, 2) as [$expSymbol, $exprValue]) {
-        $symbol = $expSymbol instanceof Symbol ? $expSymbol : new Symbol((string) _eval($expSymbol, $env));
+        $symbol = bindingSymbol($expSymbol, $env);
 
         $envForSymbol = envForSymbol($symbol, $env);
         $envForSymbol->put($symbol, _eval($exprValue, $env));
@@ -247,4 +294,23 @@ function _handleProcedure(array $x, HashMapInterface $env, bool $tail): mixed
     }
 
     return $procInstance($env, ...$x);
+}
+
+function bindingSymbol(mixed $expr, HashMapInterface $env): Symbol
+{
+    if ($expr instanceof Located) {
+        $expr = $expr->value;
+    }
+
+    return $expr instanceof Symbol ? $expr : new Symbol((string) _eval($expr, $env));
+}
+
+final class OperandFailure extends \Exception
+{
+    public function __construct(
+        public readonly int $index,
+        \Throwable $cause,
+    ) {
+        parent::__construct($cause->getMessage(), previous: $cause);
+    }
 }

@@ -7,7 +7,7 @@ namespace Che\SimpleLisp;
 trait ProcedureInitTrait
 {
     protected readonly array $args;
-    protected readonly Symbol|array|string|bool|float|int|Form $body;
+    protected readonly Symbol|array|string|bool|float|int|Form|Located $body;
 
     private function initParams(array $list): void
     {

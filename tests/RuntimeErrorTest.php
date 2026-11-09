@@ -39,9 +39,9 @@ class RuntimeErrorTest extends TestCase
         } catch (RuntimeError $error) {
             self::assertSame('Division by zero', $error->getMessage());
             self::assertSame(1, $error->atLine);
-            self::assertSame(1, $error->atColumn);
+            self::assertSame(6, $error->atColumn);
             self::assertInstanceOf(\DivisionByZeroError::class, $error->getPrevious());
-            self::assertSame("1:1: Division by zero\n(/ 1 0)\n^", formatRuntimeError($error));
+            self::assertSame("1:6: Division by zero\n(/ 1 0)\n     ^", formatRuntimeError($error));
         }
     }
 
@@ -52,8 +52,8 @@ class RuntimeErrorTest extends TestCase
             self::fail('Division by zero must be reported');
         } catch (RuntimeError $error) {
             self::assertSame(1, $error->atLine);
-            self::assertSame(5, $error->atColumn);
-            self::assertSame("1:5: Division by zero\n(do (/ 1 0))\n    ^", formatRuntimeError($error));
+            self::assertSame(10, $error->atColumn);
+            self::assertSame("1:10: Division by zero\n(do (/ 1 0))\n         ^", formatRuntimeError($error));
         }
     }
 
@@ -66,8 +66,8 @@ class RuntimeErrorTest extends TestCase
             self::fail('Division by zero must be reported');
         } catch (RuntimeError $error) {
             self::assertSame(2, $error->atLine);
-            self::assertSame(3, $error->atColumn);
-            self::assertSame("2:3: Division by zero\n  (/ n 0)))\n  ^", formatRuntimeError($error));
+            self::assertSame(8, $error->atColumn);
+            self::assertSame("2:8: Division by zero\n  (/ n 0)))\n       ^", formatRuntimeError($error));
         }
     }
 
@@ -85,8 +85,65 @@ class RuntimeErrorTest extends TestCase
             self::fail('Division by zero must be reported');
         } catch (RuntimeError $error) {
             self::assertSame(2, $error->atLine);
-            self::assertSame(3, $error->atColumn);
-            self::assertSame("2:3: Division by zero\n  (/ n 0))\n  ^", formatRuntimeError($error));
+            self::assertSame(8, $error->atColumn);
+            self::assertSame("2:8: Division by zero\n  (/ n 0))\n       ^", formatRuntimeError($error));
         }
+    }
+
+    public function testAdditionPointsAtTheQuotedSymbol(): void
+    {
+        try {
+            evalSource(_defaultEnv(), "(+ 1 2 'a)");
+            self::fail('Adding a symbol must be reported');
+        } catch (RuntimeError $error) {
+            self::assertSame('Unsupported operand types: float + Che\SimpleLisp\Symbol', $error->getMessage());
+            self::assertSame(1, $error->atLine);
+            self::assertSame(8, $error->atColumn);
+            self::assertSame("1:8: Unsupported operand types: float + Che\\SimpleLisp\\Symbol\n(+ 1 2 'a)\n       ^", formatRuntimeError($error));
+        }
+    }
+
+    public function testAdditionPointsAtALeadingQuotedSymbol(): void
+    {
+        try {
+            evalSource(_defaultEnv(), "(+ 'a 1)");
+            self::fail('Adding a symbol must be reported');
+        } catch (RuntimeError $error) {
+            self::assertSame(1, $error->atLine);
+            self::assertSame(4, $error->atColumn);
+            self::assertSame("1:4: {$error->getMessage()}\n(+ 'a 1)\n   ^", formatRuntimeError($error));
+        }
+    }
+
+    public function testCarPointsAtItsArgument(): void
+    {
+        try {
+            evalSource(_defaultEnv(), "(car 'a)");
+            self::fail('car of a symbol must be reported');
+        } catch (RuntimeError $error) {
+            self::assertSame(1, $error->atLine);
+            self::assertSame(6, $error->atColumn);
+            self::assertSame("1:6: {$error->getMessage()}\n(car 'a)\n     ^", formatRuntimeError($error));
+        }
+    }
+
+    public function testPhpCallStaysOnTheForm(): void
+    {
+        try {
+            evalSource(_defaultEnv(), '(php "intdiv" 1 0)');
+            self::fail('intdiv by zero must be reported');
+        } catch (RuntimeError $error) {
+            self::assertSame('Division by zero', $error->getMessage());
+            self::assertSame(1, $error->atLine);
+            self::assertSame(1, $error->atColumn);
+            self::assertSame("1:1: Division by zero\n(php \"intdiv\" 1 0)\n^", formatRuntimeError($error));
+        }
+    }
+
+    public function testArrayCallKeepsThePhpException(): void
+    {
+        $this->expectException(\DivisionByZeroError::class);
+
+        _eval([new \Che\SimpleLisp\Symbol('/'), 1.0, 0.0], _defaultEnv());
     }
 }

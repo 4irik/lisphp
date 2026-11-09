@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Che\SimpleLisp\Parse;
 
+use Che\SimpleLisp\Form;
+use Che\SimpleLisp\Located;
 use Che\SimpleLisp\RuntimeError;
 use Che\SimpleLisp\Symbol;
 
 /**
- * @phpstan-type Atom scalar|bool|Symbol
+ * @phpstan-type Atom scalar|bool|Symbol|\Che\SimpleLisp\Located
  * @phpstan-type Command Atom|iterable
  */
 
@@ -163,7 +165,7 @@ function _atom(string $token): int|float|bool|string|Symbol
  * @return Command
  * @throws \Exception
  */
-function parseTokens(iterable $tokens, ?string $source = null): int|float|bool|string|Symbol|iterable
+function parseTokens(iterable $tokens, ?string $source = null): int|float|bool|string|Symbol|iterable|Located
 {
     if (!$tokens instanceof \SplDoublyLinkedList) {
         $buf = new \SplDoublyLinkedList();
@@ -186,7 +188,7 @@ function tokenText(mixed $token): string
  * @return Command
  * @throws \Exception
  */
-function _parseTokens(\SplDoublyLinkedList $tokens, ?string $source = null): int|float|bool|string|Symbol|iterable
+function _parseTokens(\SplDoublyLinkedList $tokens, ?string $source = null): int|float|bool|string|Symbol|iterable|Located
 {
     if ($tokens->isEmpty()) {
         throw unexpectedEof($source);
@@ -212,17 +214,31 @@ function _parseTokens(\SplDoublyLinkedList $tokens, ?string $source = null): int
 
         $snippet = $source === null ? '' : lineText($source, $token->line);
 
-        return new \Che\SimpleLisp\Form($elements, $token->line, $token->column, $snippet);
+        return new Form($elements, $token->line, $token->column, $snippet);
     }
 
     if ($text === '\'') {
-        return [
+        $quoted = [
             _atom($text),
             _parseTokens($tokens, $source),
         ];
+        if (!$token instanceof Token) {
+            return $quoted;
+        }
+
+        $snippet = $source === null ? '' : lineText($source, $token->line);
+
+        return new Form($quoted, $token->line, $token->column, $snippet);
     }
 
-    return _atom($text);
+    $atom = _atom($text);
+    if (!$token instanceof Token) {
+        return $atom;
+    }
+
+    $snippet = $source === null ? '' : lineText($source, $token->line);
+
+    return new Located($atom, $token->line, $token->column, $snippet);
 }
 
 function unexpectedEof(?string $source): SyntaxError

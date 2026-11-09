@@ -38,7 +38,11 @@ final readonly class Lambda implements \IteratorAggregate
             }
 
             $localEnv->put(
-                $argVarItem instanceof Symbol ? $argVarItem : new Symbol((string) _eval($argVarItem, $env)),
+                $argVarItem instanceof Symbol
+                    ? $argVarItem
+                    : ($argVarItem instanceof Located && $argVarItem->value instanceof Symbol
+                        ? $argVarItem->value
+                        : new Symbol((string) _eval($argVarItem, $env))),
                 _eval($argsValue, $env),
             );
         }
