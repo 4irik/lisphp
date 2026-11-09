@@ -7,6 +7,29 @@ use Symfony\Component\VarDumper\Caster\SplCaster;
 use function Che\SimpleLisp\Eval\_eval;
 use function Che\SimpleLisp\Eval\trampoline;
 
+final class MacroArgs
+{
+    /**
+     * @var array<string, mixed>
+     */
+    private array $map = [];
+
+    public function put(Symbol $symbol, mixed $value): void
+    {
+        $this->map[(string) $symbol] = $value;
+    }
+
+    public function has(Symbol $symbol): bool
+    {
+        return isset($this->map[(string) $symbol]);
+    }
+
+    public function get(Symbol $symbol): mixed
+    {
+        return $this->map[(string) $symbol] ?? null;
+    }
+}
+
 final readonly class Macro implements \IteratorAggregate
 {
     use ProcedureInitTrait;
@@ -23,28 +46,14 @@ final readonly class Macro implements \IteratorAggregate
 
     public function tailApply(HashMapInterface $env, array $args): mixed
     {
-        $argsMap = new class() {
-            private array $map = [];
-
-            public function put(Symbol $symbol, mixed $value): void
-            {
-                $this->map[(string) $symbol] = $value;
-            }
-
-            public function has(Symbol $symbol): bool
-            {
-                return isset($this->map[(string) $symbol]);
-            }
-
-            public function get(Symbol $symbol): mixed
-            {
-                return $this->map[(string) $symbol] ?? null;
-            }
-        };
+        $argsMap = new MacroArgs();
 
         $countExpectedArgs = count($this->args);
         $countReceivedArgs = count($args);
         foreach ($this->args as $argKey => $argName) {
+            if (!$argName instanceof Symbol) {
+                throw new \TypeError('Macro parameter must be a symbol');
+            }
             if ($countExpectedArgs < $countReceivedArgs && ($argKey + 1) === $countExpectedArgs) {
                 $argsValue = $args;
             } else {
@@ -54,10 +63,15 @@ final readonly class Macro implements \IteratorAggregate
             $argsMap->put($argName, $argsValue);
         }
 
-        return _eval($this->substitute($this->body, $argsMap), $env, true);
+        $expanded = $this->substitute($this->body, $argsMap);
+        if (!is_object($expanded) && !is_array($expanded) && !is_scalar($expanded)) {
+            throw new \TypeError('Macro expansion is not a value');
+        }
+
+        return _eval($expanded, $env, true);
     }
 
-    private function substitute(mixed $node, object $argsMap): mixed
+    private function substitute(mixed $node, MacroArgs $argsMap): mixed
     {
         if ($node instanceof Symbol && $argsMap->has($node)) {
             return $argsMap->get($node);

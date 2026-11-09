@@ -36,7 +36,13 @@ final readonly class Procedure implements \IteratorAggregate
                 throw $error->getPrevious() ?? $error;
             }
 
-            throw new RuntimeError($error->getMessage(), $place[0], $place[1], $place[2], $error->getPrevious() ?? $error);
+            throw new RuntimeError(
+                $error->getMessage(),
+                $place[0],
+                $place[1],
+                $place[2],
+                $error->getPrevious() ?? $error,
+            );
         } catch (\Throwable $error) {
             if (count($args) === 1 && $places[0] !== null) {
                 [$line, $column, $sourceLine] = $places[0];

@@ -99,7 +99,10 @@ class RuntimeErrorTest extends TestCase
             self::assertSame('Unsupported operand types: float + Che\SimpleLisp\Symbol', $error->getMessage());
             self::assertSame(1, $error->atLine);
             self::assertSame(8, $error->atColumn);
-            self::assertSame("1:8: Unsupported operand types: float + Che\\SimpleLisp\\Symbol\n(+ 1 2 'a)\n       ^", formatRuntimeError($error));
+            self::assertSame(
+                "1:8: Unsupported operand types: float + Che\\SimpleLisp\\Symbol\n(+ 1 2 'a)\n       ^",
+                formatRuntimeError($error),
+            );
         }
     }
 

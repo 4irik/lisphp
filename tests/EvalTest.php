@@ -573,7 +573,14 @@ class EvalTest extends TestCase
         $env->put(new Symbol($sum = '+'), new Procedure($sum, static fn(int $a, int $b): int => $a + $b));
         $env->put(
             new Symbol($car = 'car'),
-            new Procedure($car, static fn(array $x): Symbol|array|string|int|float|bool => current($x)),
+            new Procedure($car, static function (array $x): Symbol|array|string|int|float|bool {
+                $item = current($x);
+                if (is_array($item) || is_string($item) || is_int($item) || is_float($item) || is_bool($item) || $item instanceof Symbol) {
+                    return $item;
+                }
+
+                throw new \TypeError('car expects a scalar, symbol, or list');
+            }),
         );
         $env->put(new Symbol($cdr = 'cdr'), new Procedure($cdr, static fn(array $x): array => array_slice($x, 1)));
 
@@ -650,7 +657,20 @@ class EvalTest extends TestCase
         $env = new HashMap();
         $env->put(
             new Symbol($concat = '++'),
-            new Procedure($concat, fn(...$x): string => reduce($x, fn($a, $b): string => $a . $b)),
+            new Procedure($concat, static function (mixed ...$x): string {
+                $result = reduce($x, static function (mixed $a, mixed $b): string {
+                    if ((!is_scalar($a) && !$a instanceof \Stringable) || (!is_scalar($b) && !$b instanceof \Stringable)) {
+                        throw new \TypeError('Concatenation expects strings');
+                    }
+
+                    return (string) $a . (string) $b;
+                });
+                if (!is_string($result)) {
+                    throw new \TypeError('Concatenation result must be a string');
+                }
+
+                return $result;
+            }),
         );
 
         _eval([
@@ -804,7 +824,20 @@ class EvalTest extends TestCase
         $env = new HashMap();
         $env->put(
             new Symbol($concat = '++'),
-            new Procedure($concat, static fn(...$x): string => reduce($x, fn($a, $b) => $a . $b)),
+            new Procedure($concat, static function (mixed ...$x): string {
+                $result = reduce($x, static function (mixed $a, mixed $b): string {
+                    if ((!is_scalar($a) && !$a instanceof \Stringable) || (!is_scalar($b) && !$b instanceof \Stringable)) {
+                        throw new \TypeError('Concatenation expects strings');
+                    }
+
+                    return (string) $a . (string) $b;
+                });
+                if (!is_string($result)) {
+                    throw new \TypeError('Concatenation result must be a string');
+                }
+
+                return $result;
+            }),
         );
 
         assertEquals(

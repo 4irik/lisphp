@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Che\SimpleLisp;
 
+/**
+ * @implements \IteratorAggregate<int, mixed>
+ */
 final readonly class Form implements \IteratorAggregate
 {
     /**

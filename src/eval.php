@@ -36,7 +36,7 @@ function reduce(iterable $list, \Closure $f): mixed
 
         try {
             $next = $f($acc, $item);
-        } catch (RuntimeError | OperandFailure $error) {
+        } catch (RuntimeError|OperandFailure $error) {
             throw $error;
         } catch (\Throwable $error) {
             $accIsNumber = is_int($acc) || is_float($acc);
@@ -152,7 +152,7 @@ function _eval(object|array|string|int|float|bool $x, HashMapInterface $env, boo
     if ($head instanceof Located) {
         $head = $head->value;
     }
-    $procedure = ControlStructureName::tryFrom((is_array($head) || $head instanceof Form) ? '' : (string) $head);
+    $procedure = ControlStructureName::tryFrom(is_array($head) || $head instanceof Form ? '' : (string) $head);
     return match ($procedure) {
         ControlStructureName::COND => _handleIf($x, $env, $tail),
         ControlStructureName::DEF => _handleDefine($x, $env),
@@ -242,10 +242,7 @@ function _handleDefine(array $x, HashMapInterface $env): null
         throw new \Exception(sprintf('"def" required an even number of arguments, received: %d', count($x)));
     }
     foreach (array_chunk($x, 2) as [$expSymbol, $exprValue]) {
-        $env->put(
-            bindingSymbol($expSymbol, $env),
-            _eval($exprValue, $env),
-        );
+        $env->put(bindingSymbol($expSymbol, $env), _eval($exprValue, $env));
     }
     return null;
 }

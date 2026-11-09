@@ -50,13 +50,8 @@ function formatRuntimeError(RuntimeError $error): string
     return formatLocation($error->getMessage(), $error->atLine, $error->atColumn, $error->sourceLine);
 }
 
-function formatLocation(
-    string $message,
-    int $atLine,
-    int $atColumn,
-    string $sourceLine,
-    string $source = '',
-): string {
+function formatLocation(string $message, int $atLine, int $atColumn, string $sourceLine, string $source = ''): string
+{
     $text = $sourceLine;
     if ($text === '' && $source !== '') {
         $text = lineText($source, $atLine);
@@ -99,28 +94,36 @@ function tokenize(string $program): array
     $program = str_replace('||||', '(-', $program);
     $program = str_replace('____', '-', $program);
 
-    $program = preg_replace_callback(
-        '/;.*$/m',
-        static fn (array $match): string => str_repeat(' ', strlen($match[0])),
-        $program,
-    ) ?? $program;
-
-    preg_match_all(
-        '/\(|\)|[-\/\\\_!?\.\w+]{2,}|\w+|\"[^"]*\"|[-\'=><?!*\/+\\\]+/m',
-        $program,
-        $matches,
-        PREG_OFFSET_CAPTURE,
-    );
+    $program =
+        preg_replace_callback(
+            '/;.*$/m',
+            static fn(array $match): string => str_repeat(' ', strlen($match[0])),
+            $program,
+        ) ?? $program;
 
     $tokens = [];
     $cursor = 0;
-    foreach ($matches[0] as [$text, $offset]) {
+    $length = strlen($program);
+    $pattern = '/\(|\)|[-\/\\\_!?\.\w+]{2,}|\w+|\"[^"]*\"|[-\'=><?!*\/+\\\]+/';
+    while ($cursor < $length) {
+        $match = [];
+        if (preg_match($pattern, $program, $match, 0, $cursor) !== 1) {
+            break;
+        }
+        $text = $match[0] ?? null;
+        if (!is_string($text) || $text === '') {
+            break;
+        }
+        $offset = strpos($program, $text, $cursor);
+        if (!is_int($offset)) {
+            break;
+        }
         rejectUnparsed($program, $cursor, $offset);
         [$line, $column] = sourcePosition($program, $offset);
         $tokens[] = new Token($text, $line, $column);
         $cursor = $offset + strlen($text);
     }
-    rejectUnparsed($program, $cursor, strlen($program));
+    rejectUnparsed($program, $cursor, $length);
 
     return $tokens;
 }
@@ -137,9 +140,6 @@ function rejectUnparsed(string $program, int $from, int $to): void
     }
 }
 
-/**
- * @return Atom
- */
 function _atom(string $token): int|float|bool|string|Symbol
 {
     if (is_numeric($token)) {
@@ -161,11 +161,10 @@ function _atom(string $token): int|float|bool|string|Symbol
 }
 
 /**
- * @param iterable<Atom> $tokens
- * @return Command
+ * @param iterable<mixed> $tokens
  * @throws \Exception
  */
-function parseTokens(iterable $tokens, ?string $source = null): int|float|bool|string|Symbol|iterable|Located
+function parseTokens(iterable $tokens, ?string $source = null): int|float|bool|string|Symbol|array|Form|Located
 {
     if (!$tokens instanceof \SplDoublyLinkedList) {
         $buf = new \SplDoublyLinkedList();
@@ -184,12 +183,13 @@ function tokenText(mixed $token): string
 }
 
 /**
- * @param \SplDoublyLinkedList<Atom> $tokens
- * @return Command
+ * @param \SplDoublyLinkedList<mixed> $tokens
  * @throws \Exception
  */
-function _parseTokens(\SplDoublyLinkedList $tokens, ?string $source = null): int|float|bool|string|Symbol|iterable|Located
-{
+function _parseTokens(
+    \SplDoublyLinkedList $tokens,
+    ?string $source = null,
+): int|float|bool|string|Symbol|array|Form|Located {
     if ($tokens->isEmpty()) {
         throw unexpectedEof($source);
     }

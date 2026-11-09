@@ -23,7 +23,7 @@ use function PHPUnit\Framework\assertEquals;
  */
 function tokenTexts(array $tokens): array
 {
-    return array_map(static fn (Token $token): string => $token->text, $tokens);
+    return array_map(static fn(Token $token): string => $token->text, $tokens);
 }
 
 function parseSource(string $source): mixed
@@ -78,18 +78,22 @@ class ParseTest extends TestCase
 
     public function testParseTokensEmpty(): void
     {
-        self::expectException(SyntaxError::class);
-        self::expectExceptionMessage('Unexpected EOF');
-
-        _parseTokens(new \SplDoublyLinkedList());
+        try {
+            _parseTokens(new \SplDoublyLinkedList());
+            self::fail('Unexpected EOF must be reported');
+        } catch (SyntaxError $error) {
+            self::assertSame('Unexpected EOF', $error->getMessage());
+        }
     }
 
     public function testParseTokenSyntaxErr(): void
     {
-        self::expectException(SyntaxError::class);
-        self::expectExceptionMessage('Unexpected ")"');
-
-        parseTokens([')']);
+        try {
+            parseTokens([')']);
+            self::fail('Unexpected ")" must be reported');
+        } catch (SyntaxError $error) {
+            self::assertSame('Unexpected ")"', $error->getMessage());
+        }
     }
 
     public function testUnexpectedCharacterPointsAtColumn(): void
@@ -107,7 +111,7 @@ class ParseTest extends TestCase
 
     public function testExtraParenPointsAtColumn(): void
     {
-        $source = "(+ 1 2))";
+        $source = '(+ 1 2))';
         try {
             parseSource($source);
             self::fail('An extra closing paren must be reported');
