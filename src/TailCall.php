@@ -12,7 +12,7 @@ final readonly class TailCall
         private array $args,
     ) {}
 
-    public function resume(): mixed
+    public function resume(): object|array|int|float|string|bool|null
     {
         return $this->fn->tailApply($this->env, $this->args);
     }

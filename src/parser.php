@@ -9,6 +9,8 @@ use Che\SimpleLisp\Located;
 use Che\SimpleLisp\RuntimeError;
 use Che\SimpleLisp\Symbol;
 
+use function Che\SimpleLisp\Eval\values;
+
 /**
  * @phpstan-type Atom scalar|bool|Symbol|\Che\SimpleLisp\Located
  * @phpstan-type Command Atom|iterable
@@ -143,7 +145,7 @@ function rejectUnparsed(string $program, int $from, int $to): void
 function _atom(string $token): int|float|bool|string|Symbol
 {
     if (is_numeric($token)) {
-        return is_int($token) ? (int) $token : (float) $token;
+        return (float) $token;
     }
 
     if ($token === 'true') {
@@ -167,23 +169,34 @@ function _atom(string $token): int|float|bool|string|Symbol
 function parseTokens(iterable $tokens, ?string $source = null): int|float|bool|string|Symbol|array|Form|Located
 {
     if (!$tokens instanceof \SplDoublyLinkedList) {
+        /** @var \SplDoublyLinkedList<object|array|int|float|string|bool|null> $buf */
         $buf = new \SplDoublyLinkedList();
-        foreach ($tokens as $t) {
-            $buf->push($t);
+        $items = is_array($tokens) ? $tokens : iterator_to_array($tokens);
+        foreach (values($items) as $token) {
+            $buf->push($token);
         }
-        $tokens = $buf;
+        return _parseTokens($buf, $source);
     }
 
+    /** @var \SplDoublyLinkedList<object|array|int|float|string|bool|null> $tokens */
     return _parseTokens($tokens, $source);
 }
 
-function tokenText(mixed $token): string
+function tokenText(object|array|int|float|string|bool|null $token): string
 {
-    return $token instanceof Token ? $token->text : (string) $token;
+    if ($token instanceof Token) {
+        return $token->text;
+    }
+    if (is_scalar($token) || $token instanceof \Stringable) {
+        return (string) $token;
+    }
+
+    return '';
 }
 
 /**
- * @param \SplDoublyLinkedList<mixed> $tokens
+ * @param \SplDoublyLinkedList<object|array|int|float|string|bool|null> $tokens
+ *
  * @throws \Exception
  */
 function _parseTokens(
@@ -194,6 +207,9 @@ function _parseTokens(
         throw unexpectedEof($source);
     }
     $token = $tokens->shift();
+    if ($token === null) {
+        throw unexpectedEof($source);
+    }
     $text = tokenText($token);
     if ($text === ')') {
         [$line, $column] = tokenSourcePosition($token);
@@ -255,7 +271,7 @@ function unexpectedEof(?string $source): SyntaxError
 /**
  * @return array{int, int}
  */
-function tokenSourcePosition(mixed $token): array
+function tokenSourcePosition(object|array|int|float|string|bool|null $token): array
 {
     return $token instanceof Token ? [$token->line, $token->column] : [1, 1];
 }

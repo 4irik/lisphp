@@ -13,7 +13,7 @@ interface HashMapInterface
 
     public function has(Symbol $symbol): bool;
 
-    public function get(Symbol $symbol): mixed;
+    public function get(Symbol $symbol): object|array|int|float|string|bool|null;
 
     public function put(Symbol $symbol, mixed $value): void;
 

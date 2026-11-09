@@ -15,18 +15,43 @@ use Che\SimpleLisp\RuntimeError;
 use Che\SimpleLisp\Symbol;
 use Che\SimpleLisp\TailCall;
 
+function value(mixed $item): object|array|int|float|string|bool|null
+{
+    if (is_object($item) || is_array($item)) {
+        return $item;
+    }
+    if (is_scalar($item) || $item === null) {
+        return $item;
+    }
+
+    throw new \TypeError('Unexpected value');
+}
+
 /**
- * @template T
- * @param iterable<T> $list
- * @param \Closure(T|mixed, T): mixed $f
- * @return mixed
+ * @param array<array-key, mixed> $list
+ *
+ * @return array<array-key, object|array|int|float|string|bool|null>
  */
-function reduce(iterable $list, \Closure $f): mixed
+function values(array $list): array
+{
+    $out = [];
+    foreach (array_keys($list) as $key) {
+        $out[$key] = value($list[$key] ?? null);
+    }
+
+    return $out;
+}
+
+/**
+ * @param array<array-key, mixed> $list
+ * @param \Closure(object|array|int|float|string|bool|null, object|array|int|float|string|bool|null): (object|array|int|float|string|bool|null) $f
+ */
+function reduce(array $list, \Closure $f): object|array|int|float|string|bool|null
 {
     $acc = null;
     $accIndex = 0;
     $index = 0;
-    foreach ($list as $item) {
+    foreach (values($list) as $item) {
         if (null === $acc) {
             $acc = $item;
             $accIndex = $index;
@@ -66,41 +91,36 @@ function argumentPlace(mixed $expr): ?array
 }
 
 /**
- * @template T
- * @template M
- * @param iterable<T> $list
- * @param \Closure<T>:M $f
- * @return iterable<M>
+ * @param iterable<mixed> $list
+ * @param \Closure(mixed): mixed $f
  */
-function map(iterable $list, \Closure $f): iterable
+function map(iterable $list, \Closure $f): \Generator
 {
-    foreach ($list as $item) {
+    $items = is_array($list) ? $list : iterator_to_array($list);
+    foreach (values($items) as $item) {
         yield $f($item);
     }
 }
 
 function envForSymbol(Symbol $s, HashMapInterface $env): HashMapInterface
 {
-    $isDetected = false;
     $startEnv = $env;
 
     while (true) {
         if ($env->has($s)) {
-            $isDetected = true;
-            break;
+            return $env;
         }
 
-        if ($env->parent() === null) {
-            break;
+        $parent = $env->parent();
+        if ($parent === null) {
+            return $startEnv;
         }
 
-        $env = $env->parent();
+        $env = $parent;
     }
-
-    return $isDetected ? $env : $startEnv;
 }
 
-function trampoline(mixed $value): mixed
+function trampoline(object|array|int|float|string|bool|null $value): object|array|int|float|string|bool|null
 {
     while ($value instanceof TailCall) {
         $value = $value->resume();
@@ -109,8 +129,12 @@ function trampoline(mixed $value): mixed
     return $value;
 }
 
-function _eval(object|array|string|int|float|bool $x, HashMapInterface $env, bool $tail = false): mixed
+function _eval(object|array|string|int|float|bool|null $x, HashMapInterface $env, bool $tail = false): object|array|string|int|float|bool|null
 {
+    if ($x === null) {
+        throw new \TypeError('Unexpected null');
+    }
+
     if (is_scalar($x)) {
         return $x;
     }
@@ -122,7 +146,7 @@ function _eval(object|array|string|int|float|bool $x, HashMapInterface $env, boo
 
     if ($x instanceof Located) {
         try {
-            return _eval($x->value, $env, $tail);
+            return _eval(value($x->value), $env, $tail);
         } catch (RuntimeError $error) {
             throw $error;
         } catch (\Throwable $error) {
@@ -148,35 +172,49 @@ function _eval(object|array|string|int|float|bool $x, HashMapInterface $env, boo
         return $x;
     }
 
-    $head = $x[0];
+    $list = values($x);
+    $head = $list[0] ?? null;
     if ($head instanceof Located) {
-        $head = $head->value;
+        $head = value($head->value);
     }
-    $procedure = ControlStructureName::tryFrom(is_array($head) || $head instanceof Form ? '' : (string) $head);
+    $procedure = ControlStructureName::tryFrom(headName($head));
     return match ($procedure) {
-        ControlStructureName::COND => _handleIf($x, $env, $tail),
-        ControlStructureName::DEF => _handleDefine($x, $env),
-        ControlStructureName::SET => _handleSet($x, $env),
-        ControlStructureName::DO => _handleDo($x, $env, $tail),
-        ControlStructureName::QUOTE => Form::data($x[1]),
-        ControlStructureName::LAMBDA => new Lambda($x, $env),
-        ControlStructureName::MACRO => new Macro($x),
-        ControlStructureName::EVAL => _eval(_eval($x[1], $env), $env, $tail),
-        ControlStructureName::TYPEOF => _typeOf(_eval($x[1], $env)),
-        ControlStructureName::SYMBOL => _handleSymbol($x[1], $env),
-        ControlStructureName::PRINT => _print($x[1], $env),
+        ControlStructureName::COND => _handleIf($list, $env, $tail),
+        ControlStructureName::DEF => _handleDefine($list, $env),
+        ControlStructureName::SET => _handleSet($list, $env),
+        ControlStructureName::DO => _handleDo($list, $env, $tail),
+        ControlStructureName::QUOTE => Form::data($list[1] ?? null),
+        ControlStructureName::LAMBDA => new Lambda($list, $env),
+        ControlStructureName::MACRO => new Macro($list),
+        ControlStructureName::EVAL => _eval(_eval($list[1] ?? null, $env), $env, $tail),
+        ControlStructureName::TYPEOF => _typeOf(_eval($list[1] ?? null, $env)),
+        ControlStructureName::SYMBOL => _handleSymbol($list[1] ?? null, $env),
+        ControlStructureName::PRINT => _print($list[1] ?? null, $env),
         ControlStructureName::READ => _handleRead(),
-        default => _handleProcedure($x, $env, $tail),
+        default => _handleProcedure($list, $env, $tail),
     };
 }
 
-function _print(object|array|int|float|string|bool $x, HashMapInterface $env): void
+function headName(object|array|int|float|string|bool|null $head): string
+{
+    if ($head === null || is_array($head) || $head instanceof Form) {
+        return '';
+    }
+    if (is_scalar($head) || $head instanceof \Stringable) {
+        return (string) $head;
+    }
+
+    throw new \Error(sprintf('Object of class %s could not be converted to string', get_debug_type($head)));
+}
+
+function _print(object|array|int|float|string|bool|null $x, HashMapInterface $env): void
 {
     $value = _eval($x, $env);
     $printableValue = match (true) {
         is_scalar($value) => $value,
-        is_object($value) && $value instanceof \Stringable => (string) $value,
-        default => throw new \Exception(sprintf('class "%s" could not be convert to string', get_class($value))),
+        $value instanceof \Stringable => (string) $value,
+        is_object($value) => throw new \Exception(sprintf('class "%s" could not be convert to string', get_class($value))),
+        default => throw new \Exception(sprintf('class "%s" could not be convert to string', get_debug_type($value))),
     };
 
     file_put_contents('php://stdout', $printableValue);
@@ -184,10 +222,15 @@ function _print(object|array|int|float|string|bool $x, HashMapInterface $env): v
 
 function _handleRead(): string
 {
-    return readline();
+    $line = readline();
+    if (!is_string($line)) {
+        throw new \TypeError('readline(): Return value must be of type string, false returned');
+    }
+
+    return $line;
 }
 
-function _typeOf(object|array|int|float|string|bool $x): string
+function _typeOf(object|array|int|float|string|bool|null $x): string
 {
     return match (true) {
         is_int($x) => 'int',
@@ -203,36 +246,55 @@ function _typeOf(object|array|int|float|string|bool $x): string
     };
 }
 
-function _handleSymbol(mixed $value, HashMapInterface $env): Symbol
+function _handleSymbol(object|array|int|float|string|bool|null $value, HashMapInterface $env): Symbol
 {
     if ($value instanceof Located) {
-        $value = $value->value;
+        $value = value($value->value);
     }
 
-    $value = match (true) {
-        is_string($value) => $value,
-        is_object($value) && $value instanceof Symbol => $value->name,
-        is_scalar($value) => (string) $value,
-        is_array($value) || $value instanceof Form => _eval($value, $env),
-        default => throw new \Exception(sprintf('symbol operation dont perform object type "%s"', gettype($value))),
-    };
+    if (is_string($value)) {
+        return new Symbol($value);
+    }
+    if ($value instanceof Symbol) {
+        return new Symbol($value->name);
+    }
+    if (is_scalar($value)) {
+        return new Symbol((string) $value);
+    }
+    if (is_array($value) || $value instanceof Form) {
+        return new Symbol(symbolName(_eval($value, $env)));
+    }
 
-    return new Symbol($value);
+    throw new \Exception(sprintf('symbol operation dont perform object type "%s"', gettype($value)));
+}
+
+function symbolName(object|array|int|float|string|bool|null $value): string
+{
+    if (is_string($value)) {
+        return $value;
+    }
+
+    throw new \TypeError(sprintf('Symbol::__construct(): Argument #1 ($name) must be of type string, %s given', get_debug_type($value)));
 }
 
 /**
+ * @param array<array-key, object|array|int|float|string|bool|null> $x
+ *
  * @throws \Exception
  */
-function _handleIf(array $x, HashMapInterface $env, bool $tail): mixed
+function _handleIf(array $x, HashMapInterface $env, bool $tail): object|array|int|float|string|bool|null
 {
-    $cond = $x[1];
-    $st_true = $x[2];
+    $cond = $x[1] ?? null;
+    $st_true = $x[2] ?? null;
     $st_false = $x[3] ?? [];
     $exp = _eval($cond, $env) ? $st_true : $st_false;
+
     return _eval($exp, $env, $tail);
 }
 
 /**
+ * @param array<array-key, object|array|int|float|string|bool|null> $x
+ *
  * @throws \Exception
  */
 function _handleDefine(array $x, HashMapInterface $env): null
@@ -244,9 +306,13 @@ function _handleDefine(array $x, HashMapInterface $env): null
     foreach (array_chunk($x, 2) as [$expSymbol, $exprValue]) {
         $env->put(bindingSymbol($expSymbol, $env), _eval($exprValue, $env));
     }
+
     return null;
 }
 
+/**
+ * @param array<array-key, object|array|int|float|string|bool|null> $x
+ */
 function _handleSet(array $x, HashMapInterface $env): null
 {
     array_shift($x);
@@ -256,7 +322,6 @@ function _handleSet(array $x, HashMapInterface $env): null
 
     foreach (array_chunk($x, 2) as [$expSymbol, $exprValue]) {
         $symbol = bindingSymbol($expSymbol, $env);
-
         $envForSymbol = envForSymbol($symbol, $env);
         $envForSymbol->put($symbol, _eval($exprValue, $env));
     }
@@ -265,41 +330,61 @@ function _handleSet(array $x, HashMapInterface $env): null
 }
 
 /**
+ * @param array<array-key, object|array|int|float|string|bool|null> $x
+ *
  * @throws \Exception
  */
-function _handleDo(array $x, HashMapInterface $env, bool $tail): mixed
+function _handleDo(array $x, HashMapInterface $env, bool $tail): object|array|int|float|string|bool|null
 {
     array_shift($x);
     if (!$x) {
         throw new \Exception('"do" required one or more arguments');
     }
     $lastIndex = array_key_last($x);
+    $val = null;
     foreach ($x as $index => $expr) {
         $val = _eval($expr, $env, $tail && $index === $lastIndex);
     }
+
     return $val;
 }
 
-function _handleProcedure(array $x, HashMapInterface $env, bool $tail): mixed
+/**
+ * @param array<array-key, object|array|int|float|string|bool|null> $x
+ */
+function _handleProcedure(array $x, HashMapInterface $env, bool $tail): object|array|int|float|string|bool|null
 {
     $procInstance = _eval(array_shift($x), $env);
     if ($tail && ($procInstance instanceof Lambda || $procInstance instanceof Macro)) {
         return new TailCall($procInstance, $env, $x);
     }
+    if ($procInstance instanceof Procedure || $procInstance instanceof Lambda || $procInstance instanceof Macro) {
+        return $procInstance($env, ...$x);
+    }
     if (!is_callable($procInstance)) {
-        $procInstance = new Procedure('list_spread', fn(...$x) => [$procInstance, ...$x]);
+        $procInstance = new Procedure('list_spread', static fn(mixed ...$args): array => [$procInstance, ...$args]);
+
+        return $procInstance($env, ...$x);
     }
 
-    return $procInstance($env, ...$x);
+    return value($procInstance($env, ...$x));
 }
 
-function bindingSymbol(mixed $expr, HashMapInterface $env): Symbol
+function bindingSymbol(object|array|int|float|string|bool|null $expr, HashMapInterface $env): Symbol
 {
     if ($expr instanceof Located) {
-        $expr = $expr->value;
+        $expr = value($expr->value);
+    }
+    if ($expr instanceof Symbol) {
+        return $expr;
     }
 
-    return $expr instanceof Symbol ? $expr : new Symbol((string) _eval($expr, $env));
+    $name = _eval($expr, $env);
+    if (is_scalar($name) || $name instanceof \Stringable) {
+        return new Symbol((string) $name);
+    }
+
+    throw new \Error(sprintf('Object of class %s could not be converted to string', get_debug_type($name)));
 }
 
 final class OperandFailure extends \Exception

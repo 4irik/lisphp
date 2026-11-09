@@ -10,6 +10,8 @@ use Che\SimpleLisp\Procedure;
 use Che\SimpleLisp\Symbol;
 
 use function Che\SimpleLisp\Eval\reduce;
+use function Che\SimpleLisp\Eval\value;
+use function Che\SimpleLisp\Eval\values;
 
 function isPhpPair(mixed $value): bool
 {
@@ -21,27 +23,28 @@ function isPhpPair(mixed $value): bool
     );
 }
 
-function phpValue(mixed $value): mixed
+function phpValue(mixed $value): object|array|int|float|string|bool|null
 {
     if ($value instanceof Symbol) {
         return (string) $value;
     }
 
     if (is_array($value) && isPhpPair($value)) {
-        $head = $value[0];
+        $pair = values($value);
+        $head = $pair[0] ?? null;
         if (!is_string($head) && !$head instanceof Symbol) {
             return $value;
         }
 
-        return [(string) $head => phpValue($value[1])];
+        return [(string) $head => phpValue($pair[1] ?? null)];
     }
 
     if (!is_array($value)) {
-        return $value;
+        return value($value);
     }
 
     $converted = [];
-    foreach ($value as $key => $item) {
+    foreach (values($value) as $key => $item) {
         $converted[$key] = phpValue($item);
     }
 
@@ -55,14 +58,15 @@ function phpValue(mixed $value): mixed
 function phpArgs(array $args): array
 {
     $converted = [];
-    foreach ($args as $arg) {
+    foreach (values($args) as $arg) {
         if (is_array($arg) && isPhpPair($arg)) {
-            $head = $arg[0];
+            $pair = values($arg);
+            $head = $pair[0] ?? null;
             if (!is_string($head) && !$head instanceof Symbol) {
                 $converted[] = phpValue($arg);
                 continue;
             }
-            $converted[(string) $head] = phpValue($arg[1]);
+            $converted[(string) $head] = phpValue($pair[1] ?? null);
             continue;
         }
 
@@ -86,7 +90,7 @@ function adaptPhpArgs(\ReflectionFunctionAbstract $reflection, array $args): arr
 
     $adapted = [];
     $index = 0;
-    foreach ($args as $key => $value) {
+    foreach (values($args) as $key => $value) {
         $parameter = is_int($key) ? $parameters[$index++] ?? null : $byName[$key] ?? null;
         $adapted[$key] = adaptPhpValue($value, $parameter?->getType());
     }
@@ -97,11 +101,12 @@ function adaptPhpArgs(\ReflectionFunctionAbstract $reflection, array $args): arr
 function adaptPhpValue(mixed $value, ?\ReflectionType $type): mixed
 {
     if (is_array($value)) {
-        foreach ($value as $key => $item) {
-            $value[$key] = adaptPhpValue($item, null);
+        $converted = [];
+        foreach (values($value) as $key => $item) {
+            $converted[$key] = adaptPhpValue($item, null);
         }
 
-        return $value;
+        return $converted;
     }
 
     if (!is_float($value) || !is_finite($value) || $value !== floor($value)) {
@@ -122,14 +127,11 @@ function adaptPhpValue(mixed $value, ?\ReflectionType $type): mixed
     return (int) $value;
 }
 
-/**
- * @param \Closure(int|float, int|float): mixed $operation
- */
 function numericReduce(array $values, \Closure $operation, string $operator): int|float
 {
-    $result = reduce($values, static function (mixed $left, mixed $right) use ($operation, $operator): int|float {
+    $result = reduce($values, static function (object|array|int|float|string|bool|null $left, object|array|int|float|string|bool|null $right) use ($operation, $operator): int|float {
         if ((is_int($left) || is_float($left)) && (is_int($right) || is_float($right))) {
-            $next = $operation($left, $right);
+            $next = value($operation($left, $right));
             if (is_int($next) || is_float($next)) {
                 return $next;
             }
@@ -153,7 +155,7 @@ function numericReduce(array $values, \Closure $operation, string $operator): in
 
 function textReduce(array $values): string
 {
-    $result = reduce($values, static function (mixed $left, mixed $right): string {
+    $result = reduce($values, static function (object|array|int|float|string|bool|null $left, object|array|int|float|string|bool|null $right): string {
         if (!(is_scalar($left) || $left instanceof \Stringable || $left === null)) {
             throw new \Error(sprintf('Object of class %s could not be converted to string', get_debug_type($left)));
         }
@@ -170,19 +172,50 @@ function textReduce(array $values): string
     return $result;
 }
 
+// @mago-ignore analysis:mixed-operand
+function lispCompare(mixed $left, mixed $right, string $operator): bool
+{
+    return match ($operator) {
+        '=' => $left == $right,
+        '>' => $left > $right,
+        '<' => $left < $right,
+        '>=' => $left >= $right,
+        '<=' => $left <= $right,
+        default => throw new \LogicException($operator),
+    };
+}
+
+// @mago-ignore analysis:invalid-type-cast
+function castArray(mixed $value): array
+{
+    return (array) $value;
+}
+
+function methodName(object|array|int|float|string|bool|null $method): string
+{
+    if ($method === null) {
+        return '';
+    }
+    if (is_scalar($method) || $method instanceof \Stringable) {
+        return (string) $method;
+    }
+
+    throw new \Error(sprintf('Object of class %s could not be converted to string', get_debug_type($method)));
+}
+
 function _defaultEnv(): HashMapInterface
 {
     $storage = new HashMap();
 
-    $add = static function (string $name, callable $closure) use ($storage) {
+    $add = static function (string $name, \Closure $closure) use ($storage): void {
         $storage->put(new Symbol($name), new Procedure($name, $closure));
     };
 
-    $add('=', static fn($a, $b): bool => $a == $b);
-    $add('>', static fn($a, $b): bool => $a > $b);
-    $add('<', static fn($a, $b): bool => $a < $b);
-    $add('>=', static fn($a, $b): bool => $a >= $b);
-    $add('<=', static fn($a, $b): bool => $a <= $b);
+    $add('=', static fn(mixed $a, mixed $b): bool => lispCompare($a, $b, '='));
+    $add('>', static fn(mixed $a, mixed $b): bool => lispCompare($a, $b, '>'));
+    $add('<', static fn(mixed $a, mixed $b): bool => lispCompare($a, $b, '<'));
+    $add('>=', static fn(mixed $a, mixed $b): bool => lispCompare($a, $b, '>='));
+    $add('<=', static fn(mixed $a, mixed $b): bool => lispCompare($a, $b, '<='));
     $add('not', static fn(bool $x): bool => !$x);
     $add('abs', static function (mixed $x): int|float {
         if (!is_int($x) && !is_float($x)) {
@@ -200,7 +233,7 @@ function _defaultEnv(): HashMapInterface
     $add('mod', static fn(mixed ...$x): int|float => numericReduce($x, static fn(int|float $a, int|float $b): int|float => $a % $b, '%'));
     $add('++', static fn(mixed ...$x): string => textReduce($x));
     $add('car', static function (array $x): Symbol|array|string|int|float|bool {
-        $item = current($x);
+        $item = current(values($x));
         if (is_array($item) || is_string($item) || is_int($item) || is_float($item) || is_bool($item) || $item instanceof Symbol) {
             return $item;
         }
@@ -208,7 +241,7 @@ function _defaultEnv(): HashMapInterface
         throw new \TypeError('car expects a scalar, symbol, or list');
     });
     $add('cdr', static fn(array $x): array => array_slice($x, 1));
-    $add('cons', static fn($a, $b): array => array_merge([$a], (array) $b));
+    $add('cons', static fn(mixed $a, mixed $b): array => array_merge([value($a)], castArray($b)));
     $add('class', static fn(string $className): string => match (class_exists($className)) {
         true => $className,
         false => throw new \Exception(sprintf('class name "%s" not found', $className)),
@@ -222,8 +255,9 @@ function _defaultEnv(): HashMapInterface
             return $function->invoke(...adaptPhpArgs($function, phpArgs($args)));
         }
 
-        $method = array_shift($args);
-        $phpArgs = phpArgs($args);
+        $argList = values($args);
+        $method = array_shift($argList);
+        $phpArgs = phpArgs($argList);
         if ($method === 'new') {
             if (!is_string($fn) || !class_exists($fn)) {
                 throw new \Exception(sprintf('class name "%s" not found', is_string($fn) ? $fn : get_debug_type($fn)));
@@ -236,11 +270,12 @@ function _defaultEnv(): HashMapInterface
 
             return $class->newInstance(...$phpArgs);
         }
+        $methodName = methodName($method);
         if (is_object($fn)) {
-            if (!method_exists($fn, (string) $method) && is_callable($fn)) {
+            if (!method_exists($fn, $methodName) && is_callable($fn)) {
                 return $fn($method, ...$phpArgs);
             }
-            $reflection = new \ReflectionMethod($fn, (string) $method);
+            $reflection = new \ReflectionMethod($fn, $methodName);
 
             return $reflection->invoke($fn, ...adaptPhpArgs($reflection, $phpArgs));
         }
@@ -248,7 +283,7 @@ function _defaultEnv(): HashMapInterface
         if (!class_exists($fn)) {
             throw new \Exception(sprintf('class name "%s" not found', $fn));
         }
-        $reflection = new \ReflectionMethod($fn, (string) $method);
+        $reflection = new \ReflectionMethod($fn, $methodName);
 
         return $reflection->invoke(null, ...adaptPhpArgs($reflection, $phpArgs));
     });

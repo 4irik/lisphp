@@ -8,7 +8,12 @@ use Che\SimpleLisp\Eval\OperandFailure;
 
 use function Che\SimpleLisp\Eval\_eval;
 use function Che\SimpleLisp\Eval\argumentPlace;
+use function Che\SimpleLisp\Eval\value;
+use function Che\SimpleLisp\Eval\values;
 
+/**
+ * @implements \IteratorAggregate<int, mixed>
+ */
 final readonly class Procedure implements \IteratorAggregate
 {
     public function __construct(
@@ -16,18 +21,18 @@ final readonly class Procedure implements \IteratorAggregate
         private \Closure $closure,
     ) {}
 
-    public function __invoke(HashMapInterface $env, ...$args): mixed
+    public function __invoke(HashMapInterface $env, mixed ...$args): object|array|int|float|string|bool|null
     {
         $places = [];
         $values = [];
-        foreach ($args as $arg) {
+        foreach (values($args) as $arg) {
             $places[] = argumentPlace($arg);
             $values[] = _eval($arg, $env);
         }
 
         $closure = $this->closure;
         try {
-            return $closure(...$values);
+            return value($closure(...$values));
         } catch (RuntimeError $error) {
             throw $error;
         } catch (OperandFailure $error) {

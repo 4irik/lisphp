@@ -8,6 +8,7 @@ includes = ["vendor"]
 
 [analyzer]
 baseline = "analysis-baseline.toml"
+excludes = ["tests", "tests/**"]
 
 [linter]
 baseline = "lint-baseline.toml"

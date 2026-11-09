@@ -6,7 +6,11 @@ namespace Che\SimpleLisp;
 
 use function Che\SimpleLisp\Eval\_eval;
 use function Che\SimpleLisp\Eval\trampoline;
+use function Che\SimpleLisp\Eval\values;
 
+/**
+ * @implements \IteratorAggregate<int, mixed>
+ */
 final readonly class Lambda implements \IteratorAggregate
 {
     use ProcedureInitTrait;
@@ -15,41 +19,53 @@ final readonly class Lambda implements \IteratorAggregate
         array $list,
         private HashMapInterface $env,
     ) {
-        $this->initParams($list);
+        [$this->args, $this->body] = $this->readParams($list);
     }
 
-    public function __invoke(HashMapInterface $env, ...$args): mixed
+    public function __invoke(HashMapInterface $env, mixed ...$args): object|array|int|float|string|bool|null
     {
         return trampoline($this->tailApply($env, $args));
     }
 
-    public function tailApply(HashMapInterface $env, array $args): mixed
+    /**
+     * @param array<array-key, mixed> $args
+     */
+    public function tailApply(HashMapInterface $env, array $args): object|array|int|float|string|bool|null
     {
         $localEnv = new HashMap($this->env);
-
+        $args = values($args);
         $countExpectedArgs = count($this->args);
         $countReceivedArgs = count($args);
+        $lastKey = array_key_last($this->args);
 
         foreach ($this->args as $key => $argVarItem) {
-            if ($countExpectedArgs < $countReceivedArgs && ($key + 1) === $countExpectedArgs) {
+            if ($countExpectedArgs < $countReceivedArgs && $key === $lastKey) {
                 $argsValue = $args;
             } else {
                 $argsValue = array_shift($args);
             }
 
-            $localEnv->put(
-                $argVarItem instanceof Symbol
-                    ? $argVarItem
-                    : (
-                        $argVarItem instanceof Located && $argVarItem->value instanceof Symbol
-                            ? $argVarItem->value
-                            : new Symbol((string) _eval($argVarItem, $env))
-                    ),
-                _eval($argsValue, $env),
-            );
+            $localEnv->put($this->parameterSymbol($argVarItem, $env), _eval($argsValue, $env));
         }
 
         return _eval($this->body, $localEnv, true);
+    }
+
+    private function parameterSymbol(object|array|int|float|string|bool|null $argVarItem, HashMapInterface $env): Symbol
+    {
+        if ($argVarItem instanceof Symbol) {
+            return $argVarItem;
+        }
+        if ($argVarItem instanceof Located && $argVarItem->value instanceof Symbol) {
+            return $argVarItem->value;
+        }
+
+        $name = _eval($argVarItem, $env);
+        if (is_scalar($name) || $name instanceof \Stringable) {
+            return new Symbol((string) $name);
+        }
+
+        throw new \Error(sprintf('Object of class %s could not be converted to string', get_debug_type($name)));
     }
 
     #[\Override]

@@ -6,17 +6,19 @@ use Symfony\Component\VarDumper\Caster\SplCaster;
 
 use function Che\SimpleLisp\Eval\_eval;
 use function Che\SimpleLisp\Eval\trampoline;
+use function Che\SimpleLisp\Eval\value;
+use function Che\SimpleLisp\Eval\values;
 
 final class MacroArgs
 {
     /**
-     * @var array<string, mixed>
+     * @var array<string, object|array|int|float|string|bool|null>
      */
     private array $map = [];
 
     public function put(Symbol $symbol, mixed $value): void
     {
-        $this->map[(string) $symbol] = $value;
+        $this->map[(string) $symbol] = value($value);
     }
 
     public function has(Symbol $symbol): bool
@@ -24,37 +26,44 @@ final class MacroArgs
         return isset($this->map[(string) $symbol]);
     }
 
-    public function get(Symbol $symbol): mixed
+    public function get(Symbol $symbol): object|array|int|float|string|bool|null
     {
         return $this->map[(string) $symbol] ?? null;
     }
 }
 
+/**
+ * @implements \IteratorAggregate<int, mixed>
+ */
 final readonly class Macro implements \IteratorAggregate
 {
     use ProcedureInitTrait;
 
     public function __construct(array $list)
     {
-        $this->initParams($list);
+        [$this->args, $this->body] = $this->readParams($list);
     }
 
-    public function __invoke(HashMapInterface $env, ...$args): mixed
+    public function __invoke(HashMapInterface $env, mixed ...$args): object|array|int|float|string|bool|null
     {
         return trampoline($this->tailApply($env, $args));
     }
 
-    public function tailApply(HashMapInterface $env, array $args): mixed
+    /**
+     * @param array<array-key, mixed> $args
+     */
+    public function tailApply(HashMapInterface $env, array $args): object|array|int|float|string|bool|null
     {
         $argsMap = new MacroArgs();
-
+        $args = values($args);
         $countExpectedArgs = count($this->args);
         $countReceivedArgs = count($args);
+        $lastKey = array_key_last($this->args);
         foreach ($this->args as $argKey => $argName) {
             if (!$argName instanceof Symbol) {
                 throw new \TypeError('Macro parameter must be a symbol');
             }
-            if ($countExpectedArgs < $countReceivedArgs && ($argKey + 1) === $countExpectedArgs) {
+            if ($countExpectedArgs < $countReceivedArgs && $argKey === $lastKey) {
                 $argsValue = $args;
             } else {
                 $argsValue = array_shift($args);
@@ -64,14 +73,14 @@ final readonly class Macro implements \IteratorAggregate
         }
 
         $expanded = $this->substitute($this->body, $argsMap);
-        if (!is_object($expanded) && !is_array($expanded) && !is_scalar($expanded)) {
+        if ($expanded === null) {
             throw new \TypeError('Macro expansion is not a value');
         }
 
         return _eval($expanded, $env, true);
     }
 
-    private function substitute(mixed $node, MacroArgs $argsMap): mixed
+    private function substitute(object|array|int|float|string|bool|null $node, MacroArgs $argsMap): object|array|int|float|string|bool|null
     {
         if ($node instanceof Symbol && $argsMap->has($node)) {
             return $argsMap->get($node);
@@ -87,7 +96,7 @@ final readonly class Macro implements \IteratorAggregate
 
         if ($node instanceof Form) {
             $items = [];
-            foreach ($node->items as $item) {
+            foreach (values($node->items) as $item) {
                 $items[] = $this->substitute($item, $argsMap);
             }
 
@@ -96,7 +105,7 @@ final readonly class Macro implements \IteratorAggregate
 
         if (is_array($node)) {
             $items = [];
-            foreach ($node as $key => $item) {
+            foreach (values($node) as $key => $item) {
                 $items[$key] = $this->substitute($item, $argsMap);
             }
 

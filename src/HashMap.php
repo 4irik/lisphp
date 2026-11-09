@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Che\SimpleLisp;
 
+use function Che\SimpleLisp\Eval\value;
+
+/**
+ * @implements \IteratorAggregate<array-key, mixed>
+ */
 class HashMap implements HashMapInterface, \IteratorAggregate
 {
     private array $_map = [];
@@ -11,12 +16,15 @@ class HashMap implements HashMapInterface, \IteratorAggregate
     private ?self $parent = null;
 
     /**
-     * @var \WeakMap<self>
+     * @var \WeakMap<self, self>
      */
     private \WeakMap $child;
 
-    public function __construct(?self $parent = null)
+    public function __construct(?HashMapInterface $parent = null)
     {
+        if ($parent !== null && !$parent instanceof self) {
+            throw new \TypeError('Parent env must be a HashMap');
+        }
         $this->parent = $parent;
         $this->child = new \WeakMap();
         if ($parent !== null) {
@@ -39,9 +47,9 @@ class HashMap implements HashMapInterface, \IteratorAggregate
         return isset($this->_map[$symbol->name]);
     }
 
-    public function get(Symbol $symbol): mixed
+    public function get(Symbol $symbol): object|array|int|float|string|bool|null
     {
-        return $this->_map[$symbol->name] ?? false;
+        return value($this->_map[$symbol->name] ?? false);
     }
 
     public function put(Symbol $symbol, mixed $value): void
