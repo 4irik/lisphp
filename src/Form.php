@@ -13,6 +13,7 @@ final readonly class Form implements \IteratorAggregate
         public array $items,
         public int $line,
         public int $column,
+        public string $sourceLine = '',
     ) {}
 
     /**

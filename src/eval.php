@@ -10,6 +10,7 @@ use Che\SimpleLisp\HashMapInterface;
 use Che\SimpleLisp\Lambda;
 use Che\SimpleLisp\Macro;
 use Che\SimpleLisp\Procedure;
+use Che\SimpleLisp\RuntimeError;
 use Che\SimpleLisp\Symbol;
 use Che\SimpleLisp\TailCall;
 
@@ -90,7 +91,13 @@ function _eval(object|array|string|int|float|bool $x, HashMapInterface $env, boo
     }
 
     if ($x instanceof Form) {
-        $x = $x->items;
+        try {
+            return _eval($x->items, $env, $tail);
+        } catch (RuntimeError $error) {
+            throw $error;
+        } catch (\Throwable $error) {
+            throw new RuntimeError($error->getMessage(), $x->line, $x->column, $x->sourceLine, $error);
+        }
     }
 
     if (is_object($x)) {

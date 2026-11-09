@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Che\SimpleLisp\Parse;
 
+use Che\SimpleLisp\RuntimeError;
 use Che\SimpleLisp\Symbol;
 
 /**
@@ -39,15 +40,36 @@ final class SyntaxError extends \Exception
 
 function formatSyntaxError(SyntaxError $error, string $source = ''): string
 {
-    $text = $error->sourceLine;
+    return formatLocation($error->getMessage(), $error->atLine, $error->atColumn, $error->sourceLine, $source);
+}
+
+function formatRuntimeError(RuntimeError $error): string
+{
+    return formatLocation($error->getMessage(), $error->atLine, $error->atColumn, $error->sourceLine);
+}
+
+function formatLocation(
+    string $message,
+    int $atLine,
+    int $atColumn,
+    string $sourceLine,
+    string $source = '',
+): string {
+    $text = $sourceLine;
     if ($text === '' && $source !== '') {
-        $lines = preg_split("/\r\n|\n|\r/", $source) ?: [];
-        $text = $lines[$error->atLine - 1] ?? '';
+        $text = lineText($source, $atLine);
     }
 
-    $caret = str_repeat(' ', max(0, $error->atColumn - 1)) . '^';
+    $caret = str_repeat(' ', max(0, $atColumn - 1)) . '^';
 
-    return sprintf("%d:%d: %s\n%s\n%s", $error->atLine, $error->atColumn, $error->getMessage(), $text, $caret);
+    return sprintf("%d:%d: %s\n%s\n%s", $atLine, $atColumn, $message, $text, $caret);
+}
+
+function lineText(string $source, int $line): string
+{
+    $lines = preg_split("/\r\n|\n|\r/", $source) ?: [];
+
+    return $lines[$line - 1] ?? '';
 }
 
 /**
@@ -188,7 +210,9 @@ function _parseTokens(\SplDoublyLinkedList $tokens, ?string $source = null): int
             return $elements;
         }
 
-        return new \Che\SimpleLisp\Form($elements, $token->line, $token->column);
+        $snippet = $source === null ? '' : lineText($source, $token->line);
+
+        return new \Che\SimpleLisp\Form($elements, $token->line, $token->column, $snippet);
     }
 
     if ($text === '\'') {

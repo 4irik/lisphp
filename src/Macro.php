@@ -23,8 +23,6 @@ final readonly class Macro implements \IteratorAggregate
 
     public function tailApply(HashMapInterface $env, array $args): mixed
     {
-        $body = $this->body instanceof Form ? $this->body->toArray() : $this->body;
-
         $argsMap = new class() {
             private array $map = [];
 
@@ -56,13 +54,34 @@ final readonly class Macro implements \IteratorAggregate
             $argsMap->put($argName, $argsValue);
         }
 
-        array_walk_recursive($body, static function (&$bodyItem) use ($argsMap): void {
-            if ($bodyItem instanceof Symbol && $argsMap->has($bodyItem)) {
-                $bodyItem = $argsMap->get($bodyItem);
-            }
-        });
+        return _eval($this->substitute($this->body, $argsMap), $env, true);
+    }
 
-        return _eval($body, $env, true);
+    private function substitute(mixed $node, object $argsMap): mixed
+    {
+        if ($node instanceof Symbol && $argsMap->has($node)) {
+            return $argsMap->get($node);
+        }
+
+        if ($node instanceof Form) {
+            $items = [];
+            foreach ($node->items as $item) {
+                $items[] = $this->substitute($item, $argsMap);
+            }
+
+            return new Form($items, $node->line, $node->column, $node->sourceLine);
+        }
+
+        if (is_array($node)) {
+            $items = [];
+            foreach ($node as $key => $item) {
+                $items[$key] = $this->substitute($item, $argsMap);
+            }
+
+            return $items;
+        }
+
+        return $node;
     }
 
     #[\Override]

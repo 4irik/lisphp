@@ -11,7 +11,9 @@ use Che\SimpleLisp\Symbol;
 use function Che\SimpleLisp\Env\_defaultEnv;
 use function Che\SimpleLisp\Eval\_eval;
 use Che\SimpleLisp\Parse\SyntaxError;
+use Che\SimpleLisp\RuntimeError;
 
+use function Che\SimpleLisp\Parse\formatRuntimeError;
 use function Che\SimpleLisp\Parse\formatSyntaxError;
 use function Che\SimpleLisp\Parse\parseTokens;
 use function Che\SimpleLisp\Parse\tokenize;
@@ -270,6 +272,10 @@ while (true) {
         $result = $result ?? 'OK';
     } catch (SyntaxError $e) {
         $result = formatSyntaxError($e, $command);
+        $messageType = MessageType::ERROR;
+        $replMode->setDisposableMode(OutputMode::UNESCAPE);
+    } catch (RuntimeError $e) {
+        $result = formatRuntimeError($e);
         $messageType = MessageType::ERROR;
         $replMode->setDisposableMode(OutputMode::UNESCAPE);
     } catch (\Throwable $e) {
