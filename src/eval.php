@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Che\SimpleLisp\Eval;
 
 use Che\SimpleLisp\ControlStructureName;
+use Che\SimpleLisp\Form;
 use Che\SimpleLisp\HashMapInterface;
 use Che\SimpleLisp\Lambda;
 use Che\SimpleLisp\Macro;
@@ -88,6 +89,10 @@ function _eval(object|array|string|int|float|bool $x, HashMapInterface $env, boo
         return $symbolEnv->has($x) ? $symbolEnv->get($x) : $x;
     }
 
+    if ($x instanceof Form) {
+        $x = $x->items;
+    }
+
     if (is_object($x)) {
         return $x;
     }
@@ -96,13 +101,14 @@ function _eval(object|array|string|int|float|bool $x, HashMapInterface $env, boo
         return $x;
     }
 
-    $procedure = ControlStructureName::tryFrom(is_array($x[0]) ? '' : (string) $x[0]);
+    $head = $x[0];
+    $procedure = ControlStructureName::tryFrom((is_array($head) || $head instanceof Form) ? '' : (string) $head);
     return match ($procedure) {
         ControlStructureName::COND => _handleIf($x, $env, $tail),
         ControlStructureName::DEF => _handleDefine($x, $env),
         ControlStructureName::SET => _handleSet($x, $env),
         ControlStructureName::DO => _handleDo($x, $env, $tail),
-        ControlStructureName::QUOTE => $x[1],
+        ControlStructureName::QUOTE => $x[1] instanceof Form ? $x[1]->toArray() : $x[1],
         ControlStructureName::LAMBDA => new Lambda($x, $env),
         ControlStructureName::MACRO => new Macro($x),
         ControlStructureName::EVAL => _eval(_eval($x[1], $env), $env, $tail),
@@ -153,7 +159,7 @@ function _handleSymbol(mixed $value, HashMapInterface $env): Symbol
         is_string($value) => $value,
         is_object($value) && $value instanceof Symbol => $value->name,
         is_scalar($value) => (string) $value,
-        is_array($value) => _eval($value, $env),
+        is_array($value) || $value instanceof Form => _eval($value, $env),
         default => throw new \Exception(sprintf('symbol operation dont perform object type "%s"', gettype($value))),
     };
 

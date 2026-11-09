@@ -23,7 +23,7 @@ final readonly class Macro implements \IteratorAggregate
 
     public function tailApply(HashMapInterface $env, array $args): mixed
     {
-        $body = $this->body;
+        $body = $this->body instanceof Form ? $this->body->toArray() : $this->body;
 
         $argsMap = new class() {
             private array $map = [];

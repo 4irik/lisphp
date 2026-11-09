@@ -11,11 +11,63 @@ use Che\SimpleLisp\Symbol;
  * @phpstan-type Command Atom|iterable
  */
 
+final readonly class Token implements \Stringable
+{
+    public function __construct(
+        public string $text,
+        public int $line,
+        public int $column,
+    ) {}
+
+    public function __toString(): string
+    {
+        return $this->text;
+    }
+}
+
+final class SyntaxError extends \Exception
+{
+    public function __construct(
+        string $message,
+        public readonly int $atLine,
+        public readonly int $atColumn,
+        public readonly string $sourceLine = '',
+    ) {
+        parent::__construct($message);
+    }
+}
+
+function formatSyntaxError(SyntaxError $error, string $source = ''): string
+{
+    $text = $error->sourceLine;
+    if ($text === '' && $source !== '') {
+        $lines = preg_split("/\r\n|\n|\r/", $source) ?: [];
+        $text = $lines[$error->atLine - 1] ?? '';
+    }
+
+    $caret = str_repeat(' ', max(0, $error->atColumn - 1)) . '^';
+
+    return sprintf("%d:%d: %s\n%s\n%s", $error->atLine, $error->atColumn, $error->getMessage(), $text, $caret);
+}
+
 /**
- * @param string $program
- * @return iterable<string>
+ * @return array{int, int}
  */
-function tokenize(string $program): iterable
+function sourcePosition(string $program, int $offset): array
+{
+    $offset = min($offset, strlen($program));
+    $prefix = substr($program, 0, $offset);
+    $line = substr_count($prefix, "\n") + 1;
+    $break = strrpos($prefix, "\n");
+    $column = $break === false ? $offset + 1 : $offset - $break;
+
+    return [$line, $column];
+}
+
+/**
+ * @return list<Token>
+ */
+function tokenize(string $program): array
 {
     // bad hack :(
     $program = str_replace('(-', '||||', $program);
@@ -23,29 +75,42 @@ function tokenize(string $program): iterable
     $program = str_replace('||||', '(-', $program);
     $program = str_replace('____', '-', $program);
 
-    // удаляем комментарии
-    $program = preg_replace('/^;.*/m', '', $program);
+    $program = preg_replace_callback(
+        '/;.*$/m',
+        static fn (array $match): string => str_repeat(' ', strlen($match[0])),
+        $program,
+    ) ?? $program;
 
     preg_match_all(
         '/\(|\)|[-\/\\\_!?\.\w+]{2,}|\w+|\"[^"]*\"|[-\'=><?!*\/+\\\]+/m',
         $program,
-        $m,
-        PREG_UNMATCHED_AS_NULL,
+        $matches,
+        PREG_OFFSET_CAPTURE,
     );
 
-    return array_values(array_filter(
-        array_map(fn(string $item): string => trim($item), $m[0]
-            //                explode(
-            //                    ' ',
-            //                    str_replace(['(', ')', '\''], [' ( ', ' ) ', ' \' '], $program)
-            //                )
-        ),
-        fn($val) => match ($val) {
-            '0' => true,
-            "\n", "\r", "\t", "\r\n" => false,
-            default => !in_array(substr($val, 0, 1), ["\n", "\r", "\t"]) && !empty($val),
-        },
-    ));
+    $tokens = [];
+    $cursor = 0;
+    foreach ($matches[0] as [$text, $offset]) {
+        rejectUnparsed($program, $cursor, $offset);
+        [$line, $column] = sourcePosition($program, $offset);
+        $tokens[] = new Token($text, $line, $column);
+        $cursor = $offset + strlen($text);
+    }
+    rejectUnparsed($program, $cursor, strlen($program));
+
+    return $tokens;
+}
+
+function rejectUnparsed(string $program, int $from, int $to): void
+{
+    for ($i = $from; $i < $to; $i++) {
+        if (ctype_space($program[$i])) {
+            continue;
+        }
+
+        [$line, $column] = sourcePosition($program, $i);
+        throw new SyntaxError(sprintf('Unexpected character "%s"', $program[$i]), $line, $column);
+    }
 }
 
 /**
@@ -76,7 +141,7 @@ function _atom(string $token): int|float|bool|string|Symbol
  * @return Command
  * @throws \Exception
  */
-function parseTokens(iterable $tokens): int|float|bool|string|Symbol|iterable
+function parseTokens(iterable $tokens, ?string $source = null): int|float|bool|string|Symbol|iterable
 {
     if (!$tokens instanceof \SplDoublyLinkedList) {
         $buf = new \SplDoublyLinkedList();
@@ -86,7 +151,12 @@ function parseTokens(iterable $tokens): int|float|bool|string|Symbol|iterable
         $tokens = $buf;
     }
 
-    return _parseTokens($tokens);
+    return _parseTokens($tokens, $source);
+}
+
+function tokenText(mixed $token): string
+{
+    return $token instanceof Token ? $token->text : (string) $token;
 }
 
 /**
@@ -94,33 +164,58 @@ function parseTokens(iterable $tokens): int|float|bool|string|Symbol|iterable
  * @return Command
  * @throws \Exception
  */
-function _parseTokens(\SplDoublyLinkedList $tokens): int|float|bool|string|Symbol|iterable
+function _parseTokens(\SplDoublyLinkedList $tokens, ?string $source = null): int|float|bool|string|Symbol|iterable
 {
     if ($tokens->isEmpty()) {
-        throw new \Exception('Unexpected EOF');
+        throw unexpectedEof($source);
     }
     $token = $tokens->shift();
-    if ($token === ')') {
-        throw new \Exception('Unexpected ")"');
+    $text = tokenText($token);
+    if ($text === ')') {
+        [$line, $column] = tokenSourcePosition($token);
+        throw new SyntaxError('Unexpected ")"', $line, $column);
     }
-    if ($token === '(') {
+    if ($text === '(') {
         $elements = [];
-        while ($tokens[0] !== ')') {
-            $elements[] = _parseTokens($tokens);
-            if ($tokens->isEmpty()) {
-                throw new \Exception('Unexpected EOF');
-            }
+        while (!$tokens->isEmpty() && tokenText($tokens[0]) !== ')') {
+            $elements[] = _parseTokens($tokens, $source);
         }
-        $tokens->shift(); // remove ')'
-        return $elements;
+        if ($tokens->isEmpty()) {
+            throw unexpectedEof($source);
+        }
+        $tokens->shift();
+        if (!$token instanceof Token) {
+            return $elements;
+        }
+
+        return new \Che\SimpleLisp\Form($elements, $token->line, $token->column);
     }
 
-    if ($token === '\'') {
+    if ($text === '\'') {
         return [
-            _atom($token),
-            _parseTokens($tokens),
+            _atom($text),
+            _parseTokens($tokens, $source),
         ];
     }
 
-    return _atom($token);
+    return _atom($text);
+}
+
+function unexpectedEof(?string $source): SyntaxError
+{
+    if ($source === null || $source === '') {
+        return new SyntaxError('Unexpected EOF', 1, 1);
+    }
+
+    [$line, $column] = sourcePosition($source, strlen($source));
+
+    return new SyntaxError('Unexpected EOF', $line, $column);
+}
+
+/**
+ * @return array{int, int}
+ */
+function tokenSourcePosition(mixed $token): array
+{
+    return $token instanceof Token ? [$token->line, $token->column] : [1, 1];
 }

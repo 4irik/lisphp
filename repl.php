@@ -10,6 +10,9 @@ use Che\SimpleLisp\Symbol;
 
 use function Che\SimpleLisp\Env\_defaultEnv;
 use function Che\SimpleLisp\Eval\_eval;
+use Che\SimpleLisp\Parse\SyntaxError;
+
+use function Che\SimpleLisp\Parse\formatSyntaxError;
 use function Che\SimpleLisp\Parse\parseTokens;
 use function Che\SimpleLisp\Parse\tokenize;
 
@@ -91,34 +94,17 @@ class BraceCounter
  *
  * @throws Exception
  */
-function consumeLine(BraceCounter $coutner, string $line): void
+function consumeLine(BraceCounter $coutner, string $line, int $lineNumber): void
 {
-    $clipErrorString = static function (string $line, int $errorPosition): string {
-        $leftPadding = 100;
-        $rightPadding = 100;
-
-        $startPos = $errorPosition - $leftPadding;
-        $startPos = ($startPos < 0) ? 0 : $startPos;
-        $endPos = $errorPosition + $rightPadding;
-
-        $pointerLine = str_repeat('-', $errorPosition) . '^' . str_repeat('-', strlen($line) - $errorPosition - 1);
-
-        return sprintf(
-            "%s\n%s",
-            substr($line, $startPos, $endPos),
-            substr($pointerLine, $startPos, $endPos)
-        );
-    };
-
     foreach (str_split($line) as $k => $char) {
         if ($char === '(') {
             $coutner->inc();
             continue;
         }
 
-        if($char === ')') {
-            if($coutner->count() === 0) {
-                throw new \Exception("Лишняя закрывающая скобка:\n" . $clipErrorString($line, $k));
+        if ($char === ')') {
+            if ($coutner->count() === 0) {
+                throw new SyntaxError('Unexpected ")"', $lineNumber, $k + 1, $line);
             }
 
             $coutner->dec();
@@ -132,19 +118,21 @@ function multiInput(OutputMode $mode): string
 
     $prompt = $mode->value;
     $result = '';
+    $lineNumber = 1;
     while (true) {
         $line = readline($prompt);
 
-        consumeLine($counter, $line);
+        consumeLine($counter, $line, $lineNumber);
         $prompt = makeIndent($counter->count());
-        $result .= $line . ' ';
+        $result .= $line . "\n";
+        $lineNumber++;
 
-        if($counter->count() === 0) {
+        if ($counter->count() === 0) {
             break;
         }
     }
 
-    return trim($result);
+    return rtrim($result);
 }
 
 enum MessageType: string
@@ -190,9 +178,16 @@ writeMessage("Наберите \033[0;33m:help\033[0m для просмотра 
 writeMessage(str_repeat('=', 53) . "\n");
 $replMode = new ReplMode(OutputMode::ESCAPE);
 while (true) {
-    $command = multiInput($replMode->getMode());
+    $command = '';
+    try {
+        $command = multiInput($replMode->getMode());
+    } catch (SyntaxError $e) {
+        writeMessage(formatSyntaxError($e), MessageType::ERROR);
+        $replMode->setDisposableMode(OutputMode::UNESCAPE);
+        continue;
+    }
 
-    if(empty(str_replace(' ', '', $command))) {
+    if (empty(str_replace(' ', '', $command))) {
         continue;
     }
 
@@ -246,7 +241,7 @@ while (true) {
                     // показать "скомпилированную" команду
                 case str_starts_with($command, ':pt'):
                     $command = trim(substr($command, 3));
-                    writeMessage(toString(parseTokens(tokenize($command))), MessageType::INFO);
+                    writeMessage(toString(parseTokens(tokenize($command), $command)), MessageType::INFO);
                     continue 2;
                 case $command === ':gc':
                     gc_collect_cycles();
@@ -273,6 +268,10 @@ while (true) {
         $result = __eval($command, $env);
         $messageType = $result === null ? MessageType::INFO : MessageType::REGULAR;
         $result = $result ?? 'OK';
+    } catch (SyntaxError $e) {
+        $result = formatSyntaxError($e, $command);
+        $messageType = MessageType::ERROR;
+        $replMode->setDisposableMode(OutputMode::UNESCAPE);
     } catch (\Throwable $e) {
         $prePrint = static function (string $s, int $maxLength): string {
             $length = strlen($s);
@@ -381,7 +380,7 @@ function __eval(string $command, HashMapInterface $env): mixed
 
     $result = null;
     while (!$tokens->isEmpty()) {
-        $result = _eval(parseTokens($tokens), $env);
+        $result = _eval(parseTokens($tokens, $command), $env);
     }
 
     return $result;

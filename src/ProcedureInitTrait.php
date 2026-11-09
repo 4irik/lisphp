@@ -7,11 +7,12 @@ namespace Che\SimpleLisp;
 trait ProcedureInitTrait
 {
     protected readonly array $args;
-    protected readonly Symbol|array|string|bool|float|int $body;
+    protected readonly Symbol|array|string|bool|float|int|Form $body;
 
     private function initParams(array $list): void
     {
-        $this->args = $list[1];
+        $args = $list[1];
+        $this->args = $args instanceof Form ? $args->toArray() : $args;
         $this->body = $list[2];
     }
 }

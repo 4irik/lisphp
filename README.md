@@ -48,5 +48,5 @@ $ php repl.php
 ## TODO
 
 1. [x] Implement Tail Call Optimization (TCO) (https://en.wikipedia.org/wiki/Tail_call);
-2. [ ] Errors should point to lisp code;
+2. [x] Errors should point to lisp code;
 3. [x] Support named arguments for interoperability with PHP.

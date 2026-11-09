@@ -4,23 +4,49 @@ declare(strict_types=1);
 
 namespace Test;
 
+use Che\SimpleLisp\Parse\SyntaxError;
+use Che\SimpleLisp\Parse\Token;
 use Che\SimpleLisp\Symbol;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
 use function Che\SimpleLisp\Parse\_atom;
 use function Che\SimpleLisp\Parse\_parseTokens;
+use function Che\SimpleLisp\Parse\formatSyntaxError;
 use function Che\SimpleLisp\Parse\parseTokens;
 use function Che\SimpleLisp\Parse\tokenize;
 use function PHPUnit\Framework\assertEquals;
+
+/**
+ * @param list<Token> $tokens
+ * @return list<string>
+ */
+function tokenTexts(array $tokens): array
+{
+    return array_map(static fn (Token $token): string => $token->text, $tokens);
+}
+
+function parseSource(string $source): mixed
+{
+    $tokens = new \SplDoublyLinkedList();
+    foreach (tokenize($source) as $token) {
+        $tokens->push($token);
+    }
+
+    $value = null;
+    while (!$tokens->isEmpty()) {
+        $value = parseTokens($tokens, $source);
+    }
+
+    return $value;
+}
 
 class ParseTest extends TestCase
 {
     #[DataProvider('tokenDP')]
     public function testTokenizer(array $expectedList, string $program): void
     {
-        self::assertEquals($expectedList, tokenize($program));
+        self::assertEquals($expectedList, tokenTexts(tokenize($program)));
     }
 
     public function testSkipCommentAtStartLine(): void
@@ -31,17 +57,17 @@ class ParseTest extends TestCase
             (+ 0 1)
             EON;
 
-        self::assertEquals(['(', '+', '0', '1', ')'], tokenize($command));
+        self::assertEquals(['(', '+', '0', '1', ')'], tokenTexts(tokenize($command)));
     }
 
     public function testTokenizeZero(): void
     {
-        self::assertEquals(['(', '+', '1', '0', ')'], tokenize('(+ 1 0)'));
+        self::assertEquals(['(', '+', '1', '0', ')'], tokenTexts(tokenize('(+ 1 0)')));
     }
 
     public function testTokenizeFloatingPoint(): void
     {
-        assertEquals(['(', '+', '1', '1.1', ')'], tokenize('(+ 1 1.1)'));
+        assertEquals(['(', '+', '1', '1.1', ')'], tokenTexts(tokenize('(+ 1 1.1)')));
     }
 
     #[DataProvider('atomDP')]
@@ -52,16 +78,70 @@ class ParseTest extends TestCase
 
     public function testParseTokensEmpty(): void
     {
-        self::expectExceptionObject(new \Exception('Unexpected EOF'));
+        self::expectException(SyntaxError::class);
+        self::expectExceptionMessage('Unexpected EOF');
 
         _parseTokens(new \SplDoublyLinkedList());
     }
 
     public function testParseTokenSyntaxErr(): void
     {
-        self::expectExceptionObject(new \Exception('Unexpected ")"'));
+        self::expectException(SyntaxError::class);
+        self::expectExceptionMessage('Unexpected ")"');
 
         parseTokens([')']);
+    }
+
+    public function testUnexpectedCharacterPointsAtColumn(): void
+    {
+        try {
+            tokenize('(+ 1 @)');
+            self::fail('An unexpected character must be reported');
+        } catch (SyntaxError $error) {
+            self::assertSame('Unexpected character "@"', $error->getMessage());
+            self::assertSame(1, $error->atLine);
+            self::assertSame(6, $error->atColumn);
+            self::assertSame("1:6: Unexpected character \"@\"\n(+ 1 @)\n     ^", formatSyntaxError($error, '(+ 1 @)'));
+        }
+    }
+
+    public function testExtraParenPointsAtColumn(): void
+    {
+        $source = "(+ 1 2))";
+        try {
+            parseSource($source);
+            self::fail('An extra closing paren must be reported');
+        } catch (SyntaxError $error) {
+            self::assertSame('Unexpected ")"', $error->getMessage());
+            self::assertSame(1, $error->atLine);
+            self::assertSame(8, $error->atColumn);
+        }
+    }
+
+    public function testUnclosedFormPointsAtEndOfSecondLine(): void
+    {
+        $source = "(+ 1\n2";
+        try {
+            parseSource($source);
+            self::fail('An unclosed form must be reported');
+        } catch (SyntaxError $error) {
+            self::assertSame('Unexpected EOF', $error->getMessage());
+            self::assertSame(2, $error->atLine);
+            self::assertSame(2, $error->atColumn);
+        }
+    }
+
+    public function testExtraParenOnSecondLine(): void
+    {
+        $source = "(+ 1\n2))";
+        try {
+            parseSource($source);
+            self::fail('An extra closing paren must be reported');
+        } catch (SyntaxError $error) {
+            self::assertSame('Unexpected ")"', $error->getMessage());
+            self::assertSame(2, $error->atLine);
+            self::assertSame(3, $error->atColumn);
+        }
     }
 
     public function testParseTokenSyntaxAtom(): void
