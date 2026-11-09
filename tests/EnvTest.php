@@ -4,13 +4,26 @@ declare(strict_types=1);
 
 namespace Test;
 
+use Che\SimpleLisp\HashMapInterface;
 use Che\SimpleLisp\Symbol;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
 use function Che\SimpleLisp\Env\_defaultEnv;
+use function Che\SimpleLisp\Eval\_eval;
+use function Che\SimpleLisp\Parse\parseTokens;
+use function Che\SimpleLisp\Parse\tokenize;
 use function PHPUnit\Framework\assertEquals;
+
+function lisp(HashMapInterface $env, string $command): mixed
+{
+    $tokens = new \SplDoublyLinkedList();
+    foreach (tokenize($command) as $token) {
+        $tokens->push($token);
+    }
+
+    return _eval(parseTokens($tokens), $env);
+}
 
 class EnvTest extends TestCase
 {
@@ -27,16 +40,16 @@ class EnvTest extends TestCase
         self::assertEquals('9eb471eb', $env->get(new Symbol('php'))($env, 'hash', 'murmur3a', '123'));
     }
 
-    #[Group('ignore')]
     public function testInteropNamedArgs(): void
     {
-        // todo: именованные аргументы
-
         $env = _defaultEnv();
         self::assertEquals('9832d40f', $env->get(new Symbol('php'))($env, 'hash', 'murmur3a', '123', [
             'options',
             ['seed', 42],
         ]));
+        self::assertEquals('9832d40f', lisp($env, "(php 'hash 'murmur3a \"123\" '(options (seed 42)))"));
+        self::assertEquals('9eb471eb', lisp($env, "(php 'hash 'murmur3a \"123\")"));
+        self::assertEquals('9eb471eb', lisp($env, '(php "hash" "murmur3a" "123")'));
     }
 
     public function testInteropCreateNewObject(): void

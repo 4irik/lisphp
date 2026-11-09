@@ -3,7 +3,7 @@ IMAGE = php:8.5-alpine
 # :Z relabels the mount for SELinux. Without it the container cannot read the project.
 RUN_ARGS = --rm -e HOME=/tmp -v "$(CURDIR)":/app:Z -w /app
 
-.PHONY: help install shell repl test test-current analyze lint fmt
+.PHONY: help install shell repl test analyze lint fmt
 
 help: ## Show this help
 	@printf "\033[33m%s:\033[0m\n" 'Available commands'
@@ -20,9 +20,6 @@ repl: ## Run the REPL in a one-off PHP 8.5 container
 
 test: ## Run all tests
 	docker run $(RUN_ARGS) $(IMAGE) php vendor/bin/phpunit -c phpunit.xml --display-errors --display-notices --display-warnings tests
-
-test-current: ## Run tests for current functionality
-	docker run $(RUN_ARGS) $(IMAGE) php vendor/bin/phpunit -c phpunit.xml --display-errors --display-notices --display-warnings --exclude-group ignore tests
 
 analyze: ## Run Mago static analysis
 	docker run $(RUN_ARGS) $(IMAGE) php vendor/bin/mago analyze

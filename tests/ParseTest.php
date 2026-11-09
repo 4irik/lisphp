@@ -110,6 +110,7 @@ class ParseTest extends TestCase
         yield [['(', '+', '1', '2', ')'], '(+ 1 2)'];
         yield [['"abc"', '"def"'], '"abc"   "def"'];
         yield [['\'', 'abc'], '\'abc'];
+        yield [['\'', 'hash', '\''], "'hash'"];
         yield [['(', '1', '2', ')', '(', 'def', 'b', '2', ')'], "(1 2)\n\n\n(def b 2)\n\n"];
         yield [['(', 'def', 'test', '1', ')'], "(def test\n 1)"];
         yield [['(', 'def', 'a', '" "', ')'], '(def a " ")'];

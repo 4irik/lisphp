@@ -39,17 +39,14 @@ $ php repl.php
 
 ## Development
 
-- `make test-current` — tests for the currently implemented functionality
-- `make test` — all tests, including those marked as ignored
+- `make test` — all tests
 - `make analyze` — static analysis (Mago)
 - `make lint` — linter (Mago)
 - `make fmt` — format PHP (Mago)
 - `make help` — list the commands
 
-**Note:** Some tests are marked as *ignore* because they test functionality not yet implemented.
-
 ## TODO
 
 1. [x] Implement Tail Call Optimization (TCO) (https://en.wikipedia.org/wiki/Tail_call);
 2. [ ] Errors should point to lisp code;
-3. [ ] Support named arguments for interoperability with PHP.
+3. [x] Support named arguments for interoperability with PHP.

@@ -17,7 +17,6 @@
     },
     "scripts": {
         "test": "@php vendor/bin/phpunit -c phpunit.xml --display-errors --display-notices --display-warnings tests",
-        "test-current": "@php vendor/bin/phpunit -c phpunit.xml --display-errors --display-notices --display-warnings --exclude-group ignore tests",
         "analyze": "@php vendor/bin/mago analyze",
         "lint": "@php vendor/bin/mago lint",
         "fmt": "@php vendor/bin/mago fmt"
