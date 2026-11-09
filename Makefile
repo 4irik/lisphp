@@ -1,32 +1,34 @@
 SHELL = /bin/bash
-DC_RUN_ARGS = --rm --user "$(shell id -u):$(shell id -g)"
+IMAGE = php:8.5-alpine
+# :Z relabels the mount for SELinux. Without it the container cannot read the project.
+RUN_ARGS = --rm -e HOME=/tmp -v "$(CURDIR)":/app:Z -w /app
 
-.PHONY: repl
+.PHONY: help install shell repl test test-current analyze lint fmt
 
 help: ## Show this help
 	@printf "\033[33m%s:\033[0m\n" 'Available commands'
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_-]+:.*?## / {printf "  \033[32m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-build: ## Build containers
-	docker compose build
+install: ## Install dependencies in a one-off PHP 8.5 container
+	docker run $(RUN_ARGS) $(IMAGE) sh -c 'php -r "copy(\"https://getcomposer.org/installer\", \"/tmp/composer-setup.php\");" && php /tmp/composer-setup.php --install-dir=/tmp --filename=composer && php /tmp/composer update -n --with-all-dependencies'
 
-install: ## Install dependencies
-	docker compose run $(DC_RUN_ARGS) app composer install -n
+shell: ## Shell in a one-off PHP 8.5 container
+	docker run -it $(RUN_ARGS) $(IMAGE) sh
 
-shell: ## App container shell
-	docker compose run $(DC_RUN_ARGS) app sh
-
-repl: ## Run REPL in app container
-	docker compose run $(DC_RUN_ARGS) app ./repl
+repl: ## Run the REPL in a one-off PHP 8.5 container
+	docker run -it $(RUN_ARGS) $(IMAGE) ./repl
 
 test: ## Run all tests
-	docker compose run $(DC_RUN_ARGS) app composer test
+	docker run $(RUN_ARGS) $(IMAGE) php vendor/bin/phpunit -c phpunit.xml --display-errors --display-notices --display-warnings tests
 
 test-current: ## Run tests for current functionality
-	docker compose run $(DC_RUN_ARGS) app composer test-current
+	docker run $(RUN_ARGS) $(IMAGE) php vendor/bin/phpunit -c phpunit.xml --display-errors --display-notices --display-warnings --exclude-group ignore tests
 
-type-check: ## Run phpstan
-	docker compose run $(DC_RUN_ARGS) app composer type-check
+analyze: ## Run Mago static analysis
+	docker run $(RUN_ARGS) $(IMAGE) php vendor/bin/mago analyze
 
-style-fix: ## Run php-cs-fixer
-	docker compose run $(DC_RUN_ARGS) app composer style-fix
+lint: ## Run Mago linter
+	docker run $(RUN_ARGS) $(IMAGE) php vendor/bin/mago lint
+
+fmt: ## Format PHP with Mago
+	docker run $(RUN_ARGS) $(IMAGE) php vendor/bin/mago fmt

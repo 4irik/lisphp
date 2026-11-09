@@ -1,0 +1,13 @@
+#:schema https://mago.carthage.software/1.59.0/schema.json
+version = "1.59"
+php-version = "8.5.0"
+
+[source]
+paths = ["src", "tests"]
+includes = ["vendor"]
+
+[analyzer]
+baseline = "analysis-baseline.toml"
+
+[linter]
+baseline = "lint-baseline.toml"

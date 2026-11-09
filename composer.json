@@ -18,16 +18,16 @@
     "scripts": {
         "test": "@php vendor/bin/phpunit -c phpunit.xml --display-errors --display-notices --display-warnings tests",
         "test-current": "@php vendor/bin/phpunit -c phpunit.xml --display-errors --display-notices --display-warnings --exclude-group ignore tests",
-        "type-check": "@php vendor/bin/phpstan analyse -c phpstan.neon",
-        "style-fix": "@php vendor/bin/php-cs-fixer fix"
+        "analyze": "@php vendor/bin/mago analyze",
+        "lint": "@php vendor/bin/mago lint",
+        "fmt": "@php vendor/bin/mago fmt"
     },
     "require-dev": {
-        "phpstan/phpstan": "^1.10",
-        "phpunit/phpunit": "^11",
-        "friendsofphp/php-cs-fixer": "^3.5"
+        "phpunit/phpunit": "^13.4",
+        "carthage-software/mago": "^1.59"
     },
     "require": {
-        "php": "^8.3",
+        "php": "^8.5",
         "ext-readline": "*"
     }
 }

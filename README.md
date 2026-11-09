@@ -5,37 +5,33 @@
 
 ## Requirements
 
-- PHP 8.3
+- PHP 8.5
 
-If you don't want to install PHP, you'll need::
+If you don't want to install PHP, you'll need:
 
 - docker
-- docker compose
 - make
+
+`make` starts a one-off `php:8.5-alpine` container. There is no image to build.
 
 ## Usage
 
-### If you use docker
+### With docker
 
-Run the following commands to build and install dependencies:
-
-```shell
-$ make build && make install
-```
-
-then start the REPL: 
+Install dependencies, then start the REPL:
 
 ```shell
+$ make install
 $ make repl
 ```
 
-### If you dont use docker
+### Without docker
 
 ```shell
 $ ./repl
 ```
 
-or 
+or
 
 ```shell
 $ php repl.php
@@ -43,15 +39,12 @@ $ php repl.php
 
 ## Development
 
-I highly recommended use docker (and docker compose) for a consistent development environment across collaborators. Makefiles simplify running frequently used commands.
-
-Makefile defines various tasks:
-
-- `make test-current` - run tests for the currently implemented functionality;
-- `make test` - run all tests (including some currently marked as ignored);
-- `make type-check` - run static type analysis (using phpstan) to detect potential issues;
-- `make style-fix` - check and fix code style for consistency and readability;
-- `make help` - display all available make command.
+- `make test-current` — tests for the currently implemented functionality
+- `make test` — all tests, including those marked as ignored
+- `make analyze` — static analysis (Mago)
+- `make lint` — linter (Mago)
+- `make fmt` — format PHP (Mago)
+- `make help` — list the commands
 
 **Note:** Some tests are marked as *ignore* because they test functionality not yet implemented.
 
