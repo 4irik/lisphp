@@ -5,6 +5,7 @@ namespace Che\SimpleLisp;
 use Symfony\Component\VarDumper\Caster\SplCaster;
 
 use function Che\SimpleLisp\Eval\_eval;
+use function Che\SimpleLisp\Eval\trampoline;
 
 final readonly class Macro implements \IteratorAggregate
 {
@@ -17,14 +18,19 @@ final readonly class Macro implements \IteratorAggregate
 
     public function __invoke(HashMapInterface $env, ...$args): mixed
     {
+        return trampoline($this->tailApply($env, $args));
+    }
+
+    public function tailApply(HashMapInterface $env, array $args): mixed
+    {
         $body = $this->body;
 
-        $argsMap = new class () {
+        $argsMap = new class() {
             private array $map = [];
 
             public function put(Symbol $symbol, mixed $value): void
             {
-                $this->map[(string)$symbol] = $value;
+                $this->map[(string) $symbol] = $value;
             }
 
             public function has(Symbol $symbol): bool
@@ -41,7 +47,7 @@ final readonly class Macro implements \IteratorAggregate
         $countExpectedArgs = count($this->args);
         $countReceivedArgs = count($args);
         foreach ($this->args as $argKey => $argName) {
-            if($countExpectedArgs < $countReceivedArgs && ($argKey + 1) === $countExpectedArgs) {
+            if ($countExpectedArgs < $countReceivedArgs && ($argKey + 1) === $countExpectedArgs) {
                 $argsValue = $args;
             } else {
                 $argsValue = array_shift($args);
@@ -51,15 +57,16 @@ final readonly class Macro implements \IteratorAggregate
         }
 
         array_walk_recursive($body, static function (&$bodyItem) use ($argsMap): void {
-            if($bodyItem instanceof Symbol && $argsMap->has($bodyItem)) {
+            if ($bodyItem instanceof Symbol && $argsMap->has($bodyItem)) {
                 $bodyItem = $argsMap->get($bodyItem);
             }
         });
 
-        return _eval($body, $env);
+        return _eval($body, $env, true);
     }
 
-    #[\Override] public function getIterator(): \Traversable
+    #[\Override]
+    public function getIterator(): \Traversable
     {
         return new \ArrayIterator([new Symbol(ControlStructureName::MACRO->value), $this->args, $this->body]);
     }

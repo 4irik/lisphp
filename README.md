@@ -57,6 +57,6 @@ Makefile defines various tasks:
 
 ## TODO
 
-1. [ ] Implement Tail Call Optimization (TCO) (https://en.wikipedia.org/wiki/Tail_call);
+1. [x] Implement Tail Call Optimization (TCO) (https://en.wikipedia.org/wiki/Tail_call);
 2. [ ] Errors should point to lisp code;
 3. [ ] Support named arguments for interoperability with PHP.
