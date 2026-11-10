@@ -6,6 +6,7 @@ namespace Che\SimpleLisp\Eval;
 
 use Che\SimpleLisp\ControlStructureName;
 use Che\SimpleLisp\Form;
+use Che\SimpleLisp\HashMap;
 use Che\SimpleLisp\HashMapInterface;
 use Che\SimpleLisp\Lambda;
 use Che\SimpleLisp\Located;
@@ -187,6 +188,7 @@ function _eval(object|array|string|int|float|bool|null $x, HashMapInterface $env
         ControlStructureName::LAMBDA => new Lambda($list, $env),
         ControlStructureName::MACRO => new Macro($list),
         ControlStructureName::EVAL => _eval(_eval($list[1] ?? null, $env), $env, $tail),
+        ControlStructureName::EVAL_IN => _handleEvalIn($list, $env, $tail),
         ControlStructureName::TYPEOF => _typeOf(_eval($list[1] ?? null, $env)),
         ControlStructureName::SYMBOL => _handleSymbol($list[1] ?? null, $env),
         ControlStructureName::PRINT => _print($list[1] ?? null, $env),
@@ -258,6 +260,9 @@ function _handleSymbol(object|array|int|float|string|bool|null $value, HashMapIn
     if ($value instanceof Symbol) {
         return new Symbol($value->name);
     }
+    if (is_bool($value)) {
+        return new Symbol($value ? 'true' : 'false');
+    }
     if (is_scalar($value)) {
         return new Symbol((string) $value);
     }
@@ -275,6 +280,60 @@ function symbolName(object|array|int|float|string|bool|null $value): string
     }
 
     throw new \TypeError(sprintf('Symbol::__construct(): Argument #1 ($name) must be of type string, %s given', get_debug_type($value)));
+}
+
+/**
+ * @param array<array-key, object|array|int|float|string|bool|null> $list
+ */
+function _handleEvalIn(array $list, HashMapInterface $env, bool $tail): object|array|int|float|string|bool|null
+{
+    if (count($list) !== 3) {
+        throw new \Exception(sprintf('"eval-in" required 2 arguments, received: %d', count($list) - 1));
+    }
+
+    $form = _eval($list[1] ?? null, $env);
+    $bindings = _eval($list[2] ?? null, $env);
+    $frame = new HashMap(rootEnv($env));
+    bindAlist($frame, $bindings);
+
+    return _eval($form, $frame, $tail);
+}
+
+function rootEnv(HashMapInterface $env): HashMap
+{
+    while (true) {
+        $parent = $env->parent();
+        if (!$parent instanceof HashMap) {
+            break;
+        }
+
+        $env = $parent;
+    }
+
+    if (!$env instanceof HashMap) {
+        throw new \TypeError('Root env must be a HashMap');
+    }
+
+    return $env;
+}
+
+function bindAlist(HashMapInterface $frame, object|array|int|float|string|bool|null $alist): void
+{
+    if (!is_array($alist)) {
+        throw new \Exception('"eval-in" bindings must be a list of pairs');
+    }
+
+    // @mago-ignore analysis:mixed-assignment
+    foreach ($alist as $pair) {
+        if (!is_array($pair) || !array_is_list($pair) || count($pair) !== 2) {
+            throw new \Exception('"eval-in" bindings must be a list of pairs');
+        }
+        if (!$pair[0] instanceof Symbol) {
+            throw new \Exception('"eval-in" binding name must be a symbol');
+        }
+
+        $frame->put($pair[0], $pair[1]);
+    }
 }
 
 /**

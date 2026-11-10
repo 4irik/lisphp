@@ -50,3 +50,4 @@ $ php repl.php
 1. [x] Implement Tail Call Optimization (TCO) (https://en.wikipedia.org/wiki/Tail_call);
 2. [x] Errors should point to lisp code;
 3. [x] Support named arguments for interoperability with PHP.
+4. [x] `(eval-in form alist)` evaluates `form` with an explicit association list (LISP 1.5 `eval`). The caller's local bindings are not visible.

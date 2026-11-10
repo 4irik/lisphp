@@ -857,5 +857,7 @@ class EvalTest extends TestCase
         assertEquals(new Symbol('abc'), _eval([new Symbol('symbol'), new Symbol('abc')], $env), 'Symbol => Symbol');
         assertEquals(new Symbol('123'), _eval([new Symbol('symbol'), 123], $env), 'int => Symbol');
         assertEquals(new Symbol('123.13'), _eval([new Symbol('symbol'), 123.13], $env), 'float => Symbol');
+        assertEquals(new Symbol('true'), _eval([new Symbol('symbol'), true], $env), 'bool true => Symbol');
+        assertEquals(new Symbol('false'), _eval([new Symbol('symbol'), false], $env), 'bool false => Symbol');
     }
 }

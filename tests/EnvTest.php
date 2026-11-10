@@ -111,6 +111,45 @@ class EnvTest extends TestCase
         assertEquals(15, $env->get(new Symbol('php'))($env, $obj, 5));
     }
 
+    public function testEvalIn(): void
+    {
+        $env = _defaultEnv();
+        self::assertEquals(11.0, lisp($env, "(eval-in '(+ x 1) '((x 10)))"));
+        self::assertEquals(3.0, lisp($env, "(eval-in '(+ 1 2) ())"));
+        self::assertEquals([new Symbol('+'), 1.0, 2.0], lisp($env, "(eval-in 'x '((x (+ 1 2))))"));
+
+        lisp($env, '(def y 4)');
+        lisp($env, "(def f (lambda (x) (eval-in 'x ())))");
+        self::assertEquals(new Symbol('x'), lisp($env, '(f 5)'));
+        lisp($env, "(def g (lambda (x) (eval-in 'y ())))");
+        self::assertEquals(4.0, lisp($env, '(g 5)'));
+    }
+
+    public function testEvalInRejectsBadBindings(): void
+    {
+        $env = _defaultEnv();
+        try {
+            lisp($env, '(eval-in)');
+            self::fail('eval-in requires 2 arguments');
+        } catch (\Exception $error) {
+            self::assertSame('"eval-in" required 2 arguments, received: 0', $error->getMessage());
+        }
+
+        try {
+            lisp($env, "(eval-in 'x 1)");
+            self::fail('eval-in bindings must be pairs');
+        } catch (\Exception $error) {
+            self::assertSame('"eval-in" bindings must be a list of pairs', $error->getMessage());
+        }
+
+        try {
+            lisp($env, "(eval-in 'x '((1 2)))");
+            self::fail('eval-in binding name must be a symbol');
+        } catch (\Exception $error) {
+            self::assertSame('"eval-in" binding name must be a symbol', $error->getMessage());
+        }
+    }
+
     public static function envDP(): iterable
     {
         yield '= true' => [
