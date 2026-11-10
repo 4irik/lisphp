@@ -148,6 +148,40 @@ class ParseTest extends TestCase
         }
     }
 
+    public function testUnterminatedString(): void
+    {
+        try {
+            tokenize('(+ "abc)');
+            self::fail('An unterminated string must be reported');
+        } catch (SyntaxError $error) {
+            self::assertSame('Unterminated string', $error->getMessage());
+            self::assertSame(1, $error->atLine);
+            self::assertSame(4, $error->atColumn);
+        }
+    }
+
+    public function testUnterminatedStringOnNextLine(): void
+    {
+        try {
+            tokenize("(+\n\"abc");
+            self::fail('An unterminated string must be reported');
+        } catch (SyntaxError $error) {
+            self::assertSame('Unterminated string', $error->getMessage());
+            self::assertSame(2, $error->atLine);
+            self::assertSame(1, $error->atColumn);
+        }
+    }
+
+    public function testAtomUnterminatedString(): void
+    {
+        try {
+            _atom('"abc');
+            self::fail('An unterminated string must be reported');
+        } catch (SyntaxError $error) {
+            self::assertSame('Unterminated string', $error->getMessage());
+        }
+    }
+
     public function testParseTokenSyntaxAtom(): void
     {
         assertEquals('test 123', parseTokens(['"test 123"']));

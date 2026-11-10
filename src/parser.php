@@ -93,12 +93,6 @@ function sourcePosition(string $program, int $offset): array
  */
 function tokenize(string $program): array
 {
-    // bad hack :(
-    $program = str_replace('(-', '||||', $program);
-    $program = str_replace('-', '____', $program);
-    $program = str_replace('||||', '(-', $program);
-    $program = str_replace('____', '-', $program);
-
     $program =
         preg_replace_callback(
             '/;.*$/m',
@@ -141,6 +135,10 @@ function rejectUnparsed(string $program, int $from, int $to): void
         }
 
         [$line, $column] = sourcePosition($program, $i);
+        if ($program[$i] === '"') {
+            throw new SyntaxError('Unterminated string', $line, $column);
+        }
+
         throw new SyntaxError(sprintf('Unexpected character "%s"', $program[$i]), $line, $column);
     }
 }
@@ -158,7 +156,11 @@ function _atom(string $lexeme): int|float|bool|string|Symbol
         return false;
     }
 
-    if ($lexeme[0] === '"') { // todo(@gs): проверить что заканчивается на '"'
+    if ($lexeme[0] === '"') {
+        if (strlen($lexeme) < 2 || !str_ends_with($lexeme, '"')) {
+            throw new SyntaxError('Unterminated string', 1, 1);
+        }
+
         return substr($lexeme, 1, -1);
     }
 
