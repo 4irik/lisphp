@@ -71,6 +71,8 @@ class BraceCounter
 {
     private int $count = 0;
 
+    private bool $inString = false;
+
     public function inc(): self
     {
         $this->count++;
@@ -89,16 +91,43 @@ class BraceCounter
     {
         return $this->count;
     }
+
+    public function inString(): bool
+    {
+        return $this->inString;
+    }
+
+    public function setInString(bool $inString): void
+    {
+        $this->inString = $inString;
+    }
 }
 
 /**
- * @todo не учитывает что скобки могут быть в составе строки
- *
- * @throws Exception
+ * @throws SyntaxError
  */
 function consumeLine(BraceCounter $coutner, string $line, int $lineNumber): void
 {
-    foreach (str_split($line) as $k => $char) {
+    $inString = $coutner->inString();
+    $length = strlen($line);
+    for ($k = 0; $k < $length; $k++) {
+        $char = $line[$k];
+        if ($inString) {
+            if ($char === '"') {
+                $inString = false;
+            }
+            continue;
+        }
+
+        if ($char === ';') {
+            break;
+        }
+
+        if ($char === '"') {
+            $inString = true;
+            continue;
+        }
+
         if ($char === '(') {
             $coutner->inc();
             continue;
@@ -112,6 +141,8 @@ function consumeLine(BraceCounter $coutner, string $line, int $lineNumber): void
             $coutner->dec();
         }
     }
+
+    $coutner->setInString($inString);
 }
 
 function multiInput(OutputMode $mode): string
@@ -129,7 +160,7 @@ function multiInput(OutputMode $mode): string
         $result .= $line . "\n";
         $lineNumber++;
 
-        if ($counter->count() === 0) {
+        if ($counter->count() === 0 && !$counter->inString()) {
             break;
         }
     }
@@ -168,6 +199,7 @@ $env = new class (_defaultEnv()) extends HashMap {
     }
 };
 
+if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === realpath(__FILE__)) {
 $std_lib = file_get_contents(implode(DIRECTORY_SEPARATOR, ['.', 'src', STD_LIB]));
 __eval($std_lib, $env);
 
@@ -296,6 +328,7 @@ while (true) {
 }
 readline_write_history(HISTORY_FILE_PATH);
 exit(0);
+}
 
 
 function toString(mixed $value, OutputMode $mode = OutputMode::ESCAPE): string
