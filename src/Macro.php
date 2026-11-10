@@ -1,8 +1,8 @@
 <?php
 
-namespace Che\SimpleLisp;
+declare(strict_types=1);
 
-use Symfony\Component\VarDumper\Caster\SplCaster;
+namespace Che\SimpleLisp;
 
 use function Che\SimpleLisp\Eval\_eval;
 use function Che\SimpleLisp\Eval\trampoline;
@@ -63,11 +63,7 @@ final readonly class Macro implements \IteratorAggregate
             if (!$argName instanceof Symbol) {
                 throw new \TypeError('Macro parameter must be a symbol');
             }
-            if ($countExpectedArgs < $countReceivedArgs && $argKey === $lastKey) {
-                $argsValue = $args;
-            } else {
-                $argsValue = array_shift($args);
-            }
+            $argsValue = $countExpectedArgs < $countReceivedArgs && $argKey === $lastKey ? $args : array_shift($args);
 
             $argsMap->put($argName, $argsValue);
         }

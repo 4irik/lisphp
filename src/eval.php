@@ -300,7 +300,7 @@ function _handleIf(array $x, HashMapInterface $env, bool $tail): object|array|in
 function _handleDefine(array $x, HashMapInterface $env): null
 {
     array_shift($x);
-    if ((count($x) % 2) != 0) {
+    if ((count($x) % 2) !== 0) {
         throw new \Exception(sprintf('"def" required an even number of arguments, received: %d', count($x)));
     }
     foreach (array_chunk($x, 2) as [$expSymbol, $exprValue]) {
@@ -316,7 +316,7 @@ function _handleDefine(array $x, HashMapInterface $env): null
 function _handleSet(array $x, HashMapInterface $env): null
 {
     array_shift($x);
-    if ((count($x) % 2) != 0) {
+    if ((count($x) % 2) !== 0) {
         throw new \Exception(sprintf('"set!" required an even number of arguments, received: %d', count($x)));
     }
 

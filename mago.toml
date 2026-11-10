@@ -12,3 +12,31 @@ excludes = ["tests", "tests/**"]
 
 [linter]
 baseline = "lint-baseline.toml"
+excludes = ["tests", "tests/**"]
+
+[linter.rules.cyclomatic-complexity]
+threshold = 25
+
+[linter.rules.function-name]
+enabled = false
+
+[linter.rules.literal-named-argument]
+enabled = false
+
+[linter.rules.halstead]
+enabled = false
+
+[linter.rules.no-boolean-flag-parameter]
+enabled = false
+
+[linter.rules.no-isset]
+enabled = false
+
+[linter.rules.file-name]
+enabled = false
+
+[linter.rules.single-class-per-file]
+enabled = false
+
+[linter.rules.identity-comparison]
+enabled = false

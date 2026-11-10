@@ -39,11 +39,7 @@ final readonly class Lambda implements \IteratorAggregate
         $lastKey = array_key_last($this->args);
 
         foreach ($this->args as $key => $argVarItem) {
-            if ($countExpectedArgs < $countReceivedArgs && $key === $lastKey) {
-                $argsValue = $args;
-            } else {
-                $argsValue = array_shift($args);
-            }
+            $argsValue = $countExpectedArgs < $countReceivedArgs && $key === $lastKey ? $args : array_shift($args);
 
             $localEnv->put($this->parameterSymbol($argVarItem, $env), _eval($argsValue, $env));
         }

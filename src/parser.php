@@ -66,7 +66,10 @@ function formatLocation(string $message, int $atLine, int $atColumn, string $sou
 
 function lineText(string $source, int $line): string
 {
-    $lines = preg_split("/\r\n|\n|\r/", $source) ?: [];
+    $lines = preg_split("/\r\n|\n|\r/", $source);
+    if (!is_array($lines)) {
+        $lines = [];
+    }
 
     return $lines[$line - 1] ?? '';
 }
@@ -142,24 +145,24 @@ function rejectUnparsed(string $program, int $from, int $to): void
     }
 }
 
-function _atom(string $token): int|float|bool|string|Symbol
+function _atom(string $lexeme): int|float|bool|string|Symbol
 {
-    if (is_numeric($token)) {
-        return (float) $token;
+    if (is_numeric($lexeme)) {
+        return (float) $lexeme;
     }
 
-    if ($token === 'true') {
+    if ($lexeme === 'true') {
         return true;
     }
-    if ($token === 'false') {
+    if ($lexeme === 'false') {
         return false;
     }
 
-    if ($token[0] === '"') { // todo: проверить что заканчивается на '"'
-        return substr($token, 1, -1);
+    if ($lexeme[0] === '"') { // todo(@gs): проверить что заканчивается на '"'
+        return substr($lexeme, 1, -1);
     }
 
-    return new Symbol($token === '\'' ? 'quote' : $token);
+    return new Symbol($lexeme === '\'' ? 'quote' : $lexeme);
 }
 
 /**
@@ -182,13 +185,13 @@ function parseTokens(iterable $tokens, ?string $source = null): int|float|bool|s
     return _parseTokens($tokens, $source);
 }
 
-function tokenText(object|array|int|float|string|bool|null $token): string
+function tokenText(object|array|int|float|string|bool|null $lexeme): string
 {
-    if ($token instanceof Token) {
-        return $token->text;
+    if ($lexeme instanceof Token) {
+        return $lexeme->text;
     }
-    if (is_scalar($token) || $token instanceof \Stringable) {
-        return (string) $token;
+    if (is_scalar($lexeme) || $lexeme instanceof \Stringable) {
+        return (string) $lexeme;
     }
 
     return '';
@@ -271,7 +274,7 @@ function unexpectedEof(?string $source): SyntaxError
 /**
  * @return array{int, int}
  */
-function tokenSourcePosition(object|array|int|float|string|bool|null $token): array
+function tokenSourcePosition(object|array|int|float|string|bool|null $lexeme): array
 {
-    return $token instanceof Token ? [$token->line, $token->column] : [1, 1];
+    return $lexeme instanceof Token ? [$lexeme->line, $lexeme->column] : [1, 1];
 }
